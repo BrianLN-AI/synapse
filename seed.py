@@ -11,19 +11,61 @@ ABI contract:
 
 import hashlib
 import json
+import marshal
 import os
 import time
 import tracemalloc
 from pathlib import Path
 from typing import Any
 
-VAULT_DIR = Path("./blob_vault")
+VAULT_DIR    = Path("./blob_vault")
+BYTECODE_DIR = Path("./blob_bytecode")   # persistent on-disk compiled code objects
 
-# Compilation cache — compile each blob's payload once, reuse the code object.
-# exec() recompiles source on every call; caching eliminates that tax for hot blobs.
+# In-process compilation cache — compile each blob's payload once per process,
+# reuse the code object. exec() recompiles source on every call; caching eliminates
+# that tax for hot blobs.
 # f_1 discovery: longer v2 blobs paid a per-call compilation cost that masked
 # their true runtime performance. Cache keyed by content_hash (immutable blobs).
 _CODE_CACHE: dict[str, Any] = {}
+
+
+def _load_code(content_hash: str, payload: str) -> Any:
+    """
+    Return a compiled code object for payload, using a two-level cache:
+      L1 — in-process _CODE_CACHE (dict in memory, reset on restart)
+      L2 — on-disk BYTECODE_DIR/<hash>.pyc (persists across restarts)
+
+    Why a persistent L2?  _CODE_CACHE is ephemeral: the first invocation of any
+    blob in a new process always paid the compile() tax.  For the core blobs
+    (discovery, planning, telemetry-reader) that are invoked thousands of times
+    across many short-lived processes, that cold-start cost compounds.  marshal
+    serialises Python code objects to bytes; storing and reloading them eliminates
+    recompilation entirely after the first run ever.
+
+    Blobs are immutable (content_hash is the SHA-256 of the envelope), so a
+    cached bytecode file for a given hash is always valid — it can never go stale.
+    """
+    if content_hash in _CODE_CACHE:
+        return _CODE_CACHE[content_hash]
+
+    BYTECODE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_path = BYTECODE_DIR / f"{content_hash}.pyc"
+
+    if cache_path.exists():
+        try:
+            code = marshal.loads(cache_path.read_bytes())
+            _CODE_CACHE[content_hash] = code
+            return code
+        except Exception:
+            pass  # corrupt or incompatible bytecode — fall through to recompile
+
+    code = compile(payload, f"<blob:{content_hash[:8]}>", "exec")
+    try:
+        cache_path.write_bytes(marshal.dumps(code))
+    except Exception:
+        pass  # disk write failure is non-fatal; L1 cache still works
+    _CODE_CACHE[content_hash] = code
+    return code
 
 
 # ---------------------------------------------------------------------------
@@ -96,9 +138,7 @@ def invoke(content_hash: str, context: dict | None = None) -> Any:
     start_ns = time.perf_counter_ns()
 
     try:
-        if content_hash not in _CODE_CACHE:
-            _CODE_CACHE[content_hash] = compile(payload, f"<blob:{content_hash[:8]}>", "exec")
-        exec(_CODE_CACHE[content_hash], scope)  # noqa: S102 — intentional; this IS the engine
+        exec(_load_code(content_hash, payload), scope)  # noqa: S102 — intentional; this IS the engine
     except Exception as exc:
         _record_telemetry(
             content_hash=content_hash,
