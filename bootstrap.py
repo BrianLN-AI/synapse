@@ -8,6 +8,12 @@ After this runs:
   - linker.py routes through all three self-hosted blobs
   - arbitrate() auto-enriches from live telemetry (feedback loop closed)
   - Manifest at v1.0.0 — f_0 is defined
+  - Two reviewers are registered: bootstrap (trust root) and evolve-engine
+
+f_6: the bootstrap reviewer is the explicit trust root.  It has no prior
+approver — it is self-grounding by design.  The evolve-engine reviewer is
+promoted by the bootstrap reviewer during the same run.  After bootstrap,
+all further reviewer promotions require a registered reviewer's approval.
 """
 
 import json
@@ -123,15 +129,52 @@ log(f"telemetry-reader: {len(result)} blob(s) with recorded history")
 """
 
 
+# ---------------------------------------------------------------------------
+# Reviewer payloads — trust root + evolve engine
+# ---------------------------------------------------------------------------
+
+BOOTSTRAP_REVIEWER_PAYLOAD = json.dumps({
+    "id":               "bootstrap",
+    "description":      "Bootstrap reviewer — explicit trust root for the f_0 closure. "
+                        "Self-grounding; no prior approver exists.",
+    "authorized_types": ["logic/python", "feedback/outcome", "council/reviewer"],
+    "trust_weight":     1.0,
+    "criteria":         "f_0 bootstrapped blobs verified by BIOS",
+}, sort_keys=True)
+
+EVOLVE_REVIEWER_PAYLOAD = json.dumps({
+    "id":               "evolve-engine",
+    "description":      "Automated f_n evolution engine — benchmarks candidates and "
+                        "promotes those that win against the current baseline.",
+    "authorized_types": ["logic/python"],
+    "trust_weight":     0.8,
+    "criteria":         "Triple-Pass Review pass + benchmark win vs current manifest blob",
+}, sort_keys=True)
+
+
 def run(reviewer: str = "bootstrap") -> dict:
     """
     Full f_0 bootstrap:
-      1. PUT Discovery, Planning, Telemetry-Reader blobs
-      2. Triple-Pass Review each
-      3. Council Approval + promote all three
-      4. Manifest → v1.0.0
+      1. Bootstrap the trust root reviewer (no prior approver required)
+      2. Promote the evolve-engine reviewer using the bootstrap reviewer
+      3. PUT Discovery, Planning, Telemetry-Reader blobs
+      4. Triple-Pass Review each
+      5. Council Approval (signed by evolve-engine reviewer) + promote all three
+      6. Manifest → v1.0.0
     """
     print("── Bootstrap: f_0 Closure")
+
+    # --- Step 1: trust root ---
+    bootstrap_reviewer_hash = promote.bootstrap_reviewer(BOOTSTRAP_REVIEWER_PAYLOAD)
+    print(f"  bootstrap reviewer  {bootstrap_reviewer_hash[:16]}...  (trust root)")
+
+    # --- Step 2: evolve-engine reviewer, approved by bootstrap reviewer ---
+    evolve_reviewer_hash = seed.put("council/reviewer", EVOLVE_REVIEWER_PAYLOAD)
+    evolve_approval = promote.issue_council_approval(
+        [evolve_reviewer_hash], reviewer_hash=bootstrap_reviewer_hash
+    )
+    promote.promote_reviewer(evolve_reviewer_hash, bootstrap_reviewer_hash, evolve_approval)
+    print(f"  evolve reviewer     {evolve_reviewer_hash[:16]}...  (approved by bootstrap)")
 
     blobs = [
         ("discovery",        DISCOVERY_PAYLOAD),
@@ -139,6 +182,7 @@ def run(reviewer: str = "bootstrap") -> dict:
         ("telemetry-reader", TELEMETRY_READER_PAYLOAD),
     ]
 
+    print()
     hashes: dict[str, str] = {}
     for label, payload in blobs:
         h = seed.put("logic/python", payload)
@@ -155,17 +199,11 @@ def run(reviewer: str = "bootstrap") -> dict:
             sys.exit(1)
 
     print()
-    # Single approval covers all three
-    approval_hash = promote.issue_council_approval(
-        list(hashes.values()), reviewer=reviewer
-    )
-    print(f"  Council approval  {approval_hash[:16]}...")
-
-    print()
     manifest_hash = None
     for label, h in hashes.items():
-        # Each promotion needs an approval that covers that blob
-        blob_approval = promote.issue_council_approval([h], reviewer=reviewer)
+        blob_approval = promote.issue_council_approval(
+            [h], reviewer_hash=evolve_reviewer_hash
+        )
         manifest_hash = promote.promote(
             label=label,
             blob_hashes=[h],
@@ -176,8 +214,14 @@ def run(reviewer: str = "bootstrap") -> dict:
 
     print(f"\n  f_0 defined. Manifest v1.0.0  hash={manifest_hash[:16]}...")
     print("  Feedback loop: telemetry → SuccessRate → Planning arbitration ✓")
+    print(f"  Reviewer chain: bootstrap → evolve-engine ✓")
 
-    return {**hashes, "manifest_hash": manifest_hash}
+    return {
+        **hashes,
+        "manifest_hash": manifest_hash,
+        "bootstrap_reviewer_hash": bootstrap_reviewer_hash,
+        "evolve_reviewer_hash": evolve_reviewer_hash,
+    }
 
 
 if __name__ == "__main__":

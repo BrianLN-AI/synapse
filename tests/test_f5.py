@@ -23,6 +23,19 @@ PASS = "\033[32mPASS\033[0m"
 FAIL = "\033[31mFAIL\033[0m"
 _results: list[tuple[str, bool]] = []
 
+# Reviewer hash populated by bootstrap at __main__ time; used by tests that need
+# a governed approval artifact (issue_council_approval requires reviewer_hash in f_6).
+_evolve_reviewer_hash: str = ""
+
+
+def _reviewer() -> str:
+    """Return a promoted reviewer hash for use in test approvals."""
+    if _evolve_reviewer_hash:
+        return _evolve_reviewer_hash
+    # Fallback: find any reviewer in the manifest
+    m = promote.load_manifest()
+    return next(iter(m.get("reviewers", {})), "")
+
 
 def check(name: str, condition: bool, detail: str = "") -> None:
     status = PASS if condition else FAIL
@@ -111,7 +124,7 @@ def test_promote_feedback_updates_manifest() -> None:
     seed.invoke(h_logic, {})
     fb_hash = seed.record_feedback(h_logic, "pass", confidence=1.0, reviewer="test")
 
-    approval = promote.issue_council_approval([fb_hash], reviewer="test-f5")
+    approval = promote.issue_council_approval([fb_hash], _reviewer())
     manifest_hash = promote.promote_feedback(
         logic_hash=h_logic,
         feedback_hashes=[fb_hash],
@@ -130,7 +143,7 @@ def test_promote_feedback_audit_log() -> None:
     h_logic  = seed.put("logic/python", "result = 'audit-test'")
     seed.invoke(h_logic, {})
     fb_hash  = seed.record_feedback(h_logic, "pass", confidence=1.0, reviewer="test")
-    approval = promote.issue_council_approval([fb_hash], reviewer="test-f5")
+    approval = promote.issue_council_approval([fb_hash], _reviewer())
     promote.promote_feedback(h_logic, [fb_hash], approval)
 
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines()
@@ -170,7 +183,7 @@ def test_governance_filter_counts_approved() -> None:
     h_blob = seed.put("logic/python", "result = 'governed'")
     seed.invoke(h_blob, {})
     fb_hash  = seed.record_feedback(h_blob, "fail", confidence=1.0, reviewer="test")
-    approval = promote.issue_council_approval([fb_hash], reviewer="test-f5")
+    approval = promote.issue_council_approval([fb_hash], _reviewer())
     promote.promote_feedback(h_blob, [fb_hash], approval)
 
     m      = promote.load_manifest()
@@ -230,7 +243,7 @@ def test_planning_v6_full_feedback_trusted_above_threshold() -> None:
 
 def test_full_f5_evolution_cycle() -> None:
     section("Full f_5 evolution cycle — governance filter active")
-    results = evolve.run_all(reviewer="test-f5")
+    results = evolve.run_all()
 
     # f_5 pattern: planning v6 (Bayesian smoothing, minimal overhead) should promote.
     # Telemetry-reader v6 correctly held vs sparse-vault baseline.
@@ -240,7 +253,7 @@ def test_full_f5_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.5.0", m["version"] == "1.5.0")
+    check("manifest version 1.6.0", m["version"] == "1.6.0")
     for label in ["discovery", "planning", "telemetry-reader"]:
         h = m.get("blobs", {}).get(label, {}).get("logic/python")
         check(f"{label} in manifest", h is not None)
@@ -281,10 +294,10 @@ def test_end_to_end_governed_feedback_loop() -> None:
                 and json.loads(env["payload"]).get("invoked") == h_bad]
 
     if good_fbs:
-        approval = promote.issue_council_approval(good_fbs, reviewer="test-f5")
+        approval = promote.issue_council_approval(good_fbs, _reviewer())
         promote.promote_feedback(h_good, good_fbs, approval)
     if bad_fbs:
-        approval = promote.issue_council_approval(bad_fbs, reviewer="test-f5")
+        approval = promote.issue_council_approval(bad_fbs, _reviewer())
         promote.promote_feedback(h_bad, bad_fbs, approval)
 
     # After governance: feedback_score reflects approved outcomes
@@ -314,7 +327,8 @@ if __name__ == "__main__":
     seed._CODE_CACHE.clear()
     seed._LAST_TELEMETRY.clear()
 
-    bootstrap.run(reviewer="test-bootstrap")
+    boot = bootstrap.run()
+    _evolve_reviewer_hash = boot["evolve_reviewer_hash"]
     print()
 
     test_feedback_integrity_pass_valid()

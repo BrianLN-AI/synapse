@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 evolve.py — D-JIT Logic Fabric Self-Modification Engine
-f_4: f_3(f_3) — fourth iteration, v4 blobs as baseline, v5 as candidates.
+f_6: f_5(f_5) — sixth iteration, v6 blobs as baseline, v7 as candidates.
 
 Cycle per core blob:
   1. Evaluate: read current hash from manifest, get fitness signals from telemetry
@@ -38,6 +38,41 @@ import seed
 
 BENCHMARK_ROUNDS = 25  # invocations per candidate for comparative fitness
 BENCHMARK_WARMUP = 5   # discard first N invocations (cold-start costs)
+
+# ---------------------------------------------------------------------------
+# Evolve-engine reviewer — the evolution engine's own council/reviewer identity
+# ---------------------------------------------------------------------------
+
+# Same payload as the one bootstrap.py promotes.  seed.put() is idempotent
+# (content-addressed), so computing this hash is free on every run.
+EVOLVE_REVIEWER_PAYLOAD = json.dumps({
+    "id":               "evolve-engine",
+    "description":      "Automated f_n evolution engine — benchmarks candidates and "
+                        "promotes those that win against the current baseline.",
+    "authorized_types": ["logic/python"],
+    "trust_weight":     0.8,
+    "criteria":         "Triple-Pass Review pass + benchmark win vs current manifest blob",
+}, sort_keys=True)
+
+
+def _ensure_evolve_reviewer() -> str:
+    """
+    Return the evolve-engine reviewer hash, ensuring it is in the manifest.
+
+    On the first run in a fresh environment (e.g., after bootstrap.run()),
+    the evolve reviewer is already promoted by bootstrap.py.  This function
+    just verifies that and returns the hash.
+
+    If somehow the reviewer is absent (unlikely but possible in test setups
+    that skip bootstrap), it bootstraps it as a trust root.  This is the
+    fallback path — the normal path is bootstrap.run() promoting it first.
+    """
+    reviewer_hash = seed.put("council/reviewer", EVOLVE_REVIEWER_PAYLOAD)
+    manifest = promote.load_manifest()
+    if reviewer_hash not in manifest.get("reviewers", {}):
+        # Fallback: bootstrap the reviewer if missing (shouldn't happen after run())
+        promote.bootstrap_reviewer(EVOLVE_REVIEWER_PAYLOAD)
+    return reviewer_hash
 
 # ---------------------------------------------------------------------------
 # Dynamic PROMOTE_TOLERANCE — derived from audit log fitness deltas
@@ -1031,10 +1066,252 @@ for h, s in stats.items():
 log(f"telemetry-reader-v6: {len(result)} blob(s), {len(approved_set)} approved-feedback hashes")
 """
 
+# ---------------------------------------------------------------------------
+# v7 Blob Payloads — f_6 candidates
+# ---------------------------------------------------------------------------
+
+# Discovery v7: normalises hash input to lowercase before vault access.
+# Improvement: v6 validates len==64 and hex chars but doesn't normalise case.
+# A hash arriving with uppercase hex chars (e.g. from an external API or
+# copy-paste) would pass the length check, fail the all-lowercase char check,
+# and raise a confusing ValueError. v7 lowercases first, then validates.
+# One str.lower() call on the hot path — essentially zero overhead.
+DISCOVERY_V7 = """\
+import json
+from pathlib import Path
+
+vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
+target_hash = context["hash"].lower()   # normalise before validation
+
+if len(target_hash) != 64 or not all(c in "0123456789abcdef" for c in target_hash):
+    raise ValueError(
+        f"Discovery v7: invalid hash {context['hash']!r} — expected 64 hex chars"
+    )
+
+try:
+    envelope = json.loads((vault_dir / target_hash).read_text())
+except FileNotFoundError:
+    vault_dir_l2 = Path(context.get("vault_dir_l2", "./blob_vault_l2"))
+    try:
+        envelope = json.loads((vault_dir_l2 / target_hash).read_text())
+        log(f"discovery-v7: L2 fallback {target_hash[:8]}...")
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Discovery v7: {target_hash} not found in L1 or L2"
+        )
+
+blob_type = envelope.get("type", "")
+if blob_type != "logic/python":
+    raise TypeError(
+        f"Discovery v7: blob {target_hash[:8]}... has type {blob_type!r}, "
+        f"expected 'logic/python'"
+    )
+
+result = envelope
+"""
+
+# Planning v7: trust-weighted FeedbackScore via reviewer authority.
+# Improvement: v6 applies Bayesian smoothing to FeedbackScore but treats all
+# approved feedback equally.  v7 weights each candidate's feedback by the
+# reviewer's trust_weight (passed via context["reviewer_trust"]).  A feedback
+# blob approved by a reviewer with trust_weight=1.0 (bootstrap reviewer) counts
+# at full confidence; one approved by a reviewer with trust_weight=0.8
+# (evolve-engine reviewer) counts at 80% confidence.  The weighted sum
+# replaces the simple pass-rate in the FeedbackScore computation.
+# Why: different reviewers have different authority levels.  An automated
+# evolution engine reviewing its own output is less authoritative than the
+# explicit trust root.  The trust_weight encodes that difference.
+PLANNING_V7 = """\
+candidates   = context.get("candidates", [])
+MIN_SAMPLES  = 5
+MIN_FEEDBACK = 3
+
+if not candidates:
+    result = None
+else:
+    def _score(c):
+        sr        = float(c.get("success_rate",   1.0))
+        integrity = float(c.get("integrity",      1.0))
+        n         = int(c.get("invocation_count",  0))
+
+        # Trust-weighted FeedbackScore: higher-authority reviewers count more.
+        # feedback_score already incorporates reviewer trust (passed via context
+        # through linker → telemetry-reader v7 → here).  Bayesian smoothing
+        # still applied when feedback is sparse.
+        raw_fb   = float(c.get("feedback_score", 1.0))
+        fb_count = int(c.get("feedback_count",    0))
+        if fb_count < MIN_FEEDBACK:
+            w              = fb_count / MIN_FEEDBACK
+            feedback_score = w * raw_fb + (1 - w) * 1.0
+        else:
+            feedback_score = raw_fb
+
+        p95 = c.get("p95_latency_ms")
+        avg = float(c.get("latency_ms", 1.0))
+        latency = max(float(p95) if p95 is not None else avg, 0.001)
+        cost    = max(float(c.get("cost", 1.0)), 0.001)
+
+        if p95 is not None and avg > 0.001:
+            burstiness = min(float(p95) / avg, 3.0)
+        else:
+            burstiness = 1.0
+
+        if n < MIN_SAMPLES:
+            w       = n / MIN_SAMPLES
+            sr      = w * sr      + (1 - w) * 0.95
+            latency = w * latency + (1 - w) * 1.0
+
+        return (sr * integrity * feedback_score) / (latency * burstiness * cost)
+
+    scored     = sorted(((c, _score(c)) for c in candidates), key=lambda x: x[1], reverse=True)
+    best, best_score = scored[0]
+
+    log(f"planning-v7: {len(candidates)} candidates, best={best['hash'][:8]}... score={best_score:.4f}")
+
+    result = {
+        "selected":  best["hash"],
+        "score":     best_score,
+        "rationale": (
+            f"f(Link)={best_score:.4f} vs runner-up {scored[1][1]:.4f}"
+            if len(scored) > 1 else "sole candidate"
+        ),
+        "ranked": [{"hash": c["hash"], "score": s} for c, s in scored],
+    }
+"""
+
+# Telemetry-Reader v7: reviewer-trust-weighted FeedbackScore.
+# Improvement: v6 counts all approved feedback at face value (confidence only).
+# v7 multiplies each feedback blob's confidence by the reviewer's trust_weight
+# (from context["reviewer_trust"]).  A blob approved by a reviewer with
+# trust_weight=1.0 contributes its full confidence; one from a 0.8-weight
+# reviewer contributes 80%.  The weighted pass rate replaces the simple pass
+# rate in FeedbackScore.  Default trust_weight = 1.0 for unknown reviewers
+# (conservative: don't penalise feedback from reviewers not in registry).
+TELEMETRY_READER_V7 = """\
+import datetime
+import json
+import math
+import time
+from pathlib import Path
+
+vault_dir        = Path(context.get("vault_dir", "./blob_vault"))
+target_hash      = context.get("hash")
+HALF_LIFE_S      = context.get("half_life_hours", 24) * 3600
+approved_feedback = context.get("approved_feedback", {})
+reviewer_trust    = context.get("reviewer_trust", {})   # {reviewer_hash: trust_weight}
+now_ts           = time.time()
+LOG2             = math.log(2)
+
+approved_set = {h for hashes in approved_feedback.values() for h in hashes}
+
+stats    = {}
+feedback = {}
+
+for blob_path in vault_dir.iterdir():
+    if not blob_path.is_file():
+        continue
+    try:
+        envelope = json.loads(blob_path.read_text())
+    except Exception:
+        continue
+
+    blob_type = envelope.get("type", "")
+
+    if blob_type == "telemetry/artifact":
+        record  = json.loads(envelope["payload"])
+        invoked = record.get("invoked")
+        if not invoked:
+            continue
+        if target_hash and invoked != target_hash:
+            continue
+
+        ts_str = record.get("timestamp_utc", "")
+        try:
+            ts    = datetime.datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                        tzinfo=datetime.timezone.utc).timestamp()
+            age_s = max(now_ts - ts, 0)
+            decay = math.exp(-LOG2 * age_s / HALF_LIFE_S)
+        except Exception:
+            decay = 1.0
+
+        s = stats.setdefault(invoked, {
+            "total_w": 0.0, "success_w": 0.0,
+            "lat_sum_w": 0.0, "mem_sum_w": 0.0,
+            "lat_mean": 0.0, "lat_M2": 0.0,
+            "streak": 0, "recent_weight": 0.0, "weight_total": 0.0,
+        })
+        ok  = record.get("error") is None
+        lat = record.get("latency_ms", 0.0)
+        mem = record.get("memory_kb",  0.0)
+        s["total_w"]   += decay
+        s["lat_sum_w"] += lat * decay
+        s["mem_sum_w"] += mem * decay
+        if ok:
+            s["success_w"] += decay
+            s["streak"]    += 1
+            s["recent_weight"] += decay * (2.0 if s["streak"] > 3 else 1.0)
+        else:
+            s["streak"] = 0
+        s["weight_total"] += 2.0 * decay
+        n     = s["total_w"]
+        delta = lat - s["lat_mean"]
+        s["lat_mean"] += delta * decay / n if n > 0 else 0
+        s["lat_M2"]   += delta * (lat - s["lat_mean"]) * decay
+
+    elif blob_type == "feedback/outcome":
+        blob_hash = blob_path.name
+        if blob_hash not in approved_set:
+            continue
+        record  = json.loads(envelope["payload"])
+        invoked = record.get("invoked")
+        if not invoked:
+            continue
+        if target_hash and invoked != target_hash:
+            continue
+        outcome        = record.get("outcome", "fail")
+        base_conf      = float(record.get("confidence", 1.0))
+        # Trust-weight: multiply confidence by reviewer's authority level
+        rev_hash       = record.get("reviewer_hash")
+        trust          = reviewer_trust.get(rev_hash, 1.0) if rev_hash else 1.0
+        eff_conf       = base_conf * trust
+        fb = feedback.setdefault(invoked, {"pos_w": 0.0, "total_w": 0.0, "count": 0})
+        fb["total_w"] += eff_conf
+        fb["count"]   += 1
+        if outcome == "pass":
+            fb["pos_w"] += eff_conf
+
+result = {}
+for h, s in stats.items():
+    if s["total_w"] < 0.001:
+        continue
+    w          = s["total_w"]
+    variance   = s["lat_M2"] / w if w > 1 else 0.0
+    std        = variance ** 0.5
+    p95_approx = s["lat_mean"] + 1.645 * std
+    integrity  = s["recent_weight"] / s["weight_total"] if s["weight_total"] > 0 else 0.0
+
+    fb             = feedback.get(h, {})
+    total_fb_w     = fb.get("total_w", 0.0)
+    feedback_score = (fb.get("pos_w", 0.0) / total_fb_w) if total_fb_w > 0 else 1.0
+
+    result[h] = {
+        "success_rate":    s["success_w"] / w,
+        "integrity":       round(integrity, 4),
+        "avg_latency_ms":  s["lat_sum_w"] / w,
+        "p95_latency_ms":  round(p95_approx, 3),
+        "avg_memory_kb":   s["mem_sum_w"]  / w,
+        "invocation_count": round(w, 2),
+        "feedback_score":  round(feedback_score, 4),
+        "feedback_count":  fb.get("count", 0),
+    }
+
+log(f"telemetry-reader-v7: {len(result)} blob(s), reviewer-trust-weighted feedback")
+"""
+
 _MUTATIONS: dict[str, str] = {
-    "discovery":        DISCOVERY_V6,
-    "planning":         PLANNING_V6,
-    "telemetry-reader": TELEMETRY_READER_V6,
+    "discovery":        DISCOVERY_V7,
+    "planning":         PLANNING_V7,
+    "telemetry-reader": TELEMETRY_READER_V7,
 }
 
 # Benchmark contexts — valid inputs for each label so invocation succeeds
@@ -1187,13 +1464,15 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         print(f"  no improvement — keeping current")
         return {"label": label, "outcome": "no-improvement", "benchmark": bm}
 
-    # Promote
-    approval      = promote.issue_council_approval([candidate_hash], reviewer=reviewer)
+    # Promote — use the governed evolve-engine reviewer (f_6)
+    evolve_reviewer_hash = _ensure_evolve_reviewer()
+    approval      = promote.issue_council_approval([candidate_hash],
+                                                    reviewer_hash=evolve_reviewer_hash)
     manifest_hash = promote.promote(
         label=label,
         blob_hashes=[candidate_hash],
         council_approval_hash=approval,
-        version="1.5.0",
+        version="1.6.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -1213,14 +1492,14 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
 def run_all(reviewer: str = "evolve") -> list[dict]:
     """Evolve all three core blobs. Returns results list."""
     tolerance = _derive_tolerance()
-    print(f"── f_5: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
+    print(f"── f_6: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
     results = []
     for label in ["telemetry-reader", "planning", "discovery"]:
-        # telemetry-reader first so subsequent benchmarks use v5 signals (feedback scores)
+        # telemetry-reader first so subsequent benchmarks use v7 signals (reviewer-trust-weighted)
         r = evolve_one(label, reviewer=reviewer)
         results.append(r)
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_5 complete. {len(promoted)}/3 blobs promoted → manifest v1.5.0")
+    print(f"\n  f_6 complete. {len(promoted)}/3 blobs promoted → manifest v1.6.0")
     return results
 
 
@@ -1231,7 +1510,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(prog="evolve", description="f_5 self-modification engine")
+    parser = argparse.ArgumentParser(prog="evolve", description="f_6 self-modification engine")
     parser.add_argument("label", nargs="?", help="Evolve one label (default: all)")
     parser.add_argument("--reviewer", default="evolve")
     args = parser.parse_args()

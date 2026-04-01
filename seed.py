@@ -219,6 +219,7 @@ def record_feedback(
     outcome: str,
     confidence: float = 1.0,
     reviewer: str = "caller",
+    reviewer_hash: str | None = None,
 ) -> str:
     """
     Store a feedback/outcome blob for a logic blob.
@@ -244,7 +245,10 @@ def record_feedback(
         logic_hash:  SHA-256 hash of the logic/python blob being rated.
         outcome:     "pass", "fail", or "partial".
         confidence:  0.0–1.0 weight applied when aggregating feedback scores.
-        reviewer:    Identifier of the caller recording this feedback.
+        reviewer:      Free-form string identifier (legacy / informal).
+        reviewer_hash: Content hash of a council/reviewer blob (f_6+ governed path).
+                       When present, the telemetry reader can weight this feedback
+                       by the reviewer's trust_weight field.
 
     Returns the content hash of the feedback/outcome blob.
     """
@@ -255,6 +259,7 @@ def record_feedback(
         "outcome":          outcome,
         "confidence":       round(float(confidence), 4),
         "reviewer":         reviewer,
+        "reviewer_hash":    reviewer_hash,      # governed reviewer blob hash (f_6+)
         "timestamp_utc":    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     return put("feedback/outcome", json.dumps(record, sort_keys=True))

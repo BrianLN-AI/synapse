@@ -80,9 +80,23 @@ def read_telemetry() -> dict:
         .get("telemetry-reader", {})
         .get("logic/python")
     )
+    # Build reviewer trust weights from the manifest reviewer registry (f_6).
+    # Each council/reviewer blob may declare a trust_weight in [0.0, 1.0].
+    # The telemetry reader uses this to weight approved feedback by reviewer authority.
+    reviewer_trust: dict[str, float] = {}
+    for rh in manifest.get("reviewers", {}):
+        try:
+            rev_blob = seed._raw_get(rh)
+            rev_data = json.loads(rev_blob["payload"])
+            reviewer_trust[rh] = float(rev_data.get("trust_weight", 1.0))
+        except Exception:
+            reviewer_trust[rh] = 1.0
+
+    import json as _json
     ctx = {
         "vault_dir":         str(seed.VAULT_DIR),
         "approved_feedback": manifest.get("approved_feedback", {}),
+        "reviewer_trust":    reviewer_trust,
     }
     if telem_hash:
         return seed.invoke(telem_hash, ctx)

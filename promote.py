@@ -99,6 +99,45 @@ def _pass_safety(blob_hash: str, blob: dict) -> None:
         )
 
 
+def _pass_reviewer_integrity(blob_hash: str, blob: dict) -> None:
+    """Pass 5: Reviewer Integrity — only for council/reviewer blobs.
+
+    Validates that the reviewer blob has the required fields and that
+    trust_weight is in (0.0, 1.0].  Non-reviewer blobs are skipped (no-op).
+
+    Why a reviewer needs its own pass:  council/reviewer blobs are not
+    executable, so Passes 2–3 skip them.  But they are trust anchors — a
+    malformed reviewer blob (trust_weight > 1.0, missing authorized_types)
+    could silently corrupt the governance chain.  This pass enforces the
+    reviewer contract before any blob is admitted to the manifest["reviewers"]
+    registry.
+    """
+    if blob.get("type") != "council/reviewer":
+        return
+
+    try:
+        record = json.loads(blob["payload"])
+    except Exception as e:
+        raise ReviewError("ReviewerIntegrity", f"payload is not valid JSON: {e}") from e
+
+    if not record.get("id"):
+        raise ReviewError("ReviewerIntegrity", "missing or empty 'id' field")
+
+    auth = record.get("authorized_types")
+    if not isinstance(auth, list) or not auth:
+        raise ReviewError("ReviewerIntegrity",
+                          "missing or empty 'authorized_types' list")
+
+    try:
+        tw = float(record.get("trust_weight", 1.0))
+    except (TypeError, ValueError) as e:
+        raise ReviewError("ReviewerIntegrity",
+                          f"trust_weight is not numeric: {record.get('trust_weight')!r}") from e
+    if not (0.0 < tw <= 1.0):
+        raise ReviewError("ReviewerIntegrity",
+                          f"trust_weight {tw} out of range (0.0, 1.0]")
+
+
 def _pass_feedback_integrity(blob_hash: str, blob: dict) -> None:
     """Pass 4: Feedback Integrity — only for feedback/outcome blobs.
 
@@ -182,6 +221,7 @@ def triple_pass_review(blob_hash: str) -> dict:
     Pass 2 — SafetyVerification: no scope-escaping patterns (logic blobs only)
     Pass 3 — ProtocolCompliance: ABI dry-run (logic/python blobs only)
     Pass 4 — FeedbackIntegrity:  structure + referential integrity (feedback blobs only)
+    Pass 5 — ReviewerIntegrity:  trust anchor validation (council/reviewer blobs only)
     """
     blob = seed._raw_get(blob_hash)
     _pass_static(blob_hash, blob)
@@ -192,29 +232,135 @@ def triple_pass_review(blob_hash: str) -> dict:
         if isinstance(e, ReviewError):
             raise
         # Non-ABI execution errors during probe are warnings, not failures
-    _pass_feedback_integrity(blob_hash, blob)  # no-op for non-feedback blobs
+    _pass_feedback_integrity(blob_hash, blob)   # no-op for non-reviewer/non-feedback blobs
+    _pass_reviewer_integrity(blob_hash, blob)   # no-op for non-reviewer blobs
     return blob
+
+
+# ---------------------------------------------------------------------------
+# Reviewer Registry
+# ---------------------------------------------------------------------------
+
+def bootstrap_reviewer(payload: str) -> str:
+    """
+    Establish the initial reviewer blob — the trust root of the governance chain.
+
+    This is the only path that does NOT require a pre-existing approved reviewer.
+    It is self-grounding by design: every governed system has an unverifiable root,
+    and the right answer is to make that root as small and auditable as possible.
+    The payload is content-addressed; the trust root is exactly as auditable as
+    the blob it produces.
+
+    After this runs, all subsequent reviewer promotions require an approval from
+    an already-registered reviewer (via promote_reviewer).
+
+    Returns the reviewer hash (also stored in manifest["reviewers"]).
+    """
+    reviewer_hash = seed.put("council/reviewer", payload)
+    # Validate the reviewer blob before installing it as a trust root
+    blob = seed._raw_get(reviewer_hash)
+    _pass_reviewer_integrity(reviewer_hash, blob)   # raises ReviewError if malformed
+
+    manifest = load_manifest()
+    manifest.setdefault("reviewers", {})[reviewer_hash] = {
+        "bootstrapped": True,
+        "registered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    _write_manifest(manifest)
+    _write_audit({
+        "event":         "bootstrap_reviewer",
+        "reviewer_hash": reviewer_hash,
+        "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+    return reviewer_hash
+
+
+def promote_reviewer(
+    reviewer_hash: str,
+    approving_reviewer_hash: str,
+    council_approval_hash: str,
+) -> str:
+    """
+    Promote a new reviewer into the manifest registry using an existing reviewer.
+
+    Requires:
+      - The new reviewer blob passes Triple-Pass Review (including ReviewerIntegrity)
+      - A council/approval artifact signed by a currently promoted reviewer
+      - The approving reviewer is itself in manifest["reviewers"]
+
+    This is the governed path for adding new reviewers after the trust root is
+    established.  The governance chain is: trust root → approves → new reviewer →
+    approves → blob candidates.  Every link is auditable in the vault.
+    """
+    # Validate the new reviewer blob
+    blob = triple_pass_review(reviewer_hash)
+    if blob["type"] != "council/reviewer":
+        raise ValueError(f"blob {reviewer_hash[:16]}... is type {blob['type']!r}, "
+                         f"expected council/reviewer")
+
+    # Verify the approving reviewer is currently promoted
+    manifest = load_manifest()
+    if approving_reviewer_hash not in manifest.get("reviewers", {}):
+        raise ValueError(f"approving reviewer {approving_reviewer_hash[:16]}... "
+                         f"is not in the manifest reviewer registry")
+
+    # Verify council approval (signed by the approving reviewer)
+    approval = _verify_council_approval(council_approval_hash, [reviewer_hash],
+                                        require_reviewer=approving_reviewer_hash)
+
+    manifest["reviewers"][reviewer_hash] = {
+        "approved_by": approving_reviewer_hash,
+        "registered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    new_hash = _write_manifest(manifest)
+    _write_audit({
+        "event":                 "promote_reviewer",
+        "reviewer_hash":         reviewer_hash,
+        "approved_by":           approving_reviewer_hash,
+        "council_approval_hash": council_approval_hash,
+        "manifest_hash":         new_hash,
+        "timestamp_utc":         time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+    return new_hash
 
 
 # ---------------------------------------------------------------------------
 # Council Approval Artifact
 # ---------------------------------------------------------------------------
 
-def issue_council_approval(blob_hashes: list[str], reviewer: str = "council") -> str:
+def issue_council_approval(blob_hashes: list[str], reviewer_hash: str) -> str:
     """
-    Create a council/approval artifact for a set of candidate blobs.
-    Returns the approval hash to be passed into promote().
+    Create a council/approval artifact signed by a governed reviewer blob.
+
+    reviewer_hash must point to a council/reviewer blob in the vault.
+    Whether the reviewer is currently promoted is enforced at verification
+    time (_verify_council_approval), not at issuance time — issuance is
+    cheap; verification is the gate.
+
+    Returns the approval hash to be passed into promote() or promote_feedback().
     """
     artifact = {
-        "reviewer": reviewer,
-        "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "reviewer_hash":  reviewer_hash,
+        "timestamp_utc":  time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "approved_blobs": blob_hashes,
     }
-    return seed.put("council/approval", json.dumps(artifact))
+    return seed.put("council/approval", json.dumps(artifact, sort_keys=True))
 
 
-def _verify_council_approval(approval_hash: str, blob_hashes: list[str]) -> dict:
-    """Verify approval artifact exists, is correct type, and covers all candidate blobs."""
+def _verify_council_approval(
+    approval_hash: str,
+    blob_hashes: list[str],
+    require_reviewer: str | None = None,
+) -> dict:
+    """
+    Verify a council/approval artifact.
+
+    Checks:
+      1. Artifact exists and has type council/approval
+      2. reviewer_hash in artifact is a promoted reviewer in manifest["reviewers"]
+      3. Artifact covers all blob_hashes
+      4. If require_reviewer is set, the reviewer_hash must match it exactly
+    """
     try:
         artifact = seed._raw_get(approval_hash)
     except FileNotFoundError:
@@ -225,13 +371,26 @@ def _verify_council_approval(approval_hash: str, blob_hashes: list[str]) -> dict
             f"Artifact {approval_hash} is type '{artifact.get('type')}', expected council/approval"
         )
 
-    approval = json.loads(artifact["payload"])
+    approval      = json.loads(artifact["payload"])
+    reviewer_hash = approval.get("reviewer_hash")
+
+    if reviewer_hash:
+        manifest = load_manifest()
+        if reviewer_hash not in manifest.get("reviewers", {}):
+            raise ValueError(
+                f"Approval reviewer {reviewer_hash[:16]}... is not a promoted reviewer"
+            )
+        if require_reviewer and reviewer_hash != require_reviewer:
+            raise ValueError(
+                f"Approval was signed by {reviewer_hash[:16]}..., "
+                f"expected {require_reviewer[:16]}..."
+            )
+
     approved = set(approval.get("approved_blobs", []))
-    missing = set(blob_hashes) - approved
+    missing  = set(blob_hashes) - approved
     if missing:
-        raise ValueError(
-            f"Council approval does not cover blobs: {sorted(missing)}"
-        )
+        raise ValueError(f"Council approval does not cover blobs: {sorted(missing)}")
+
     return approval
 
 
@@ -293,7 +452,7 @@ def promote(
         "label": label,
         "blobs": review_results,
         "council_approval_hash": council_approval_hash,
-        "council_reviewer": approval.get("reviewer"),
+        "council_reviewer_hash": approval.get("reviewer_hash"),
         "manifest_hash": new_hash,
         "version": manifest["version"],
     })
@@ -417,7 +576,7 @@ def _cli() -> None:
             raise SystemExit(1)
 
     elif args.cmd == "approve":
-        h = issue_council_approval(args.hashes, reviewer=args.reviewer)
+        h = issue_council_approval(args.hashes, args.reviewer)
         print(h)
 
     elif args.cmd == "run":
