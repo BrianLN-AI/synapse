@@ -116,7 +116,20 @@ def invoke(h: str, context: dict = None) -> dict:
         except Exception:
             pass
 
-    # 3. Binding (The Engine)
+    # 3. State Resolution (The Persistent Substrate)
+    state = {}
+    state_id = request_envelope.get("params", {}).get("state_id")
+    state_file = VAULT_DIR / "state" / str(state_id) if state_id else None
+    
+    if state_id and state_file.exists():
+        try:
+            with open(state_file, "r") as f:
+                state_h = f.read().strip()
+            state = json.loads(_raw_get(state_h, is_bios=True))
+        except Exception:
+            pass
+
+    # 4. Binding (The Engine)
     payload = _raw_get(h)
     
     # Telemetry Sink
@@ -133,40 +146,51 @@ def invoke(h: str, context: dict = None) -> dict:
             l4_h = manifest.get("layers", {}).get("l4")
             if l4_h and h != l4_h:
                 l4_payload = _raw_get(l4_h, is_bios=True)
-                # Pass payload and plan to L4 for binding
-                import subprocess
+                # Pass payload, plan, AND state to L4
                 l4_scope = {
                     "context": {
                         "target_payload": payload,
                         "target_context": request_envelope,
-                        "execution_plan": execution_plan
+                        "execution_plan": execution_plan,
+                        "state": state # Inject current state
                     },
-                    "log": log, # Share log sink for L4 trace
+                    "log": log,
                     "result": None,
-                    "subprocess": subprocess, # Inject for external runtimes
-                    "json": json # Inject for serialization
+                    "subprocess": subprocess,
+                    "json": json
                 }
-                exec(l4_payload, {"__builtins__": __builtins__}, l4_scope)
+                exec(l4_payload, l4_scope, l4_scope)
                 result = l4_scope.get("result")
+                # Capture updated state from L4
+                state = l4_scope.get("context", {}).get("state", state)
                 status = "success"
                 error = None
             else:
-                # Fallback to direct execution if L4 not found or we're invoking L4 itself
-                local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan}
-                exec(payload, {"__builtins__": __builtins__}, local_scope)
+                # Fallback to direct execution
+                local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state}
+                exec(payload, local_scope, local_scope)
                 result = local_scope.get("result")
+                state = local_scope.get("state", state)
                 status = "success"
                 error = None
         else:
             # Fallback for no manifest (BIOS)
-            local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan}
-            exec(payload, {"__builtins__": __builtins__}, local_scope)
+            local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state}
+            exec(payload, local_scope, local_scope)
             result = local_scope.get("result")
+            state = local_scope.get("state", state)
             status = "success"
             error = None
             
         if result is None:
             raise ValueError(f"Blob {h} violated ABI: No 'result' assigned.")
+
+        # 5. State Persistence
+        if state_id:
+            state_h = put(json.dumps(state), "system/state")
+            state_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(state_file, "w") as f:
+                f.write(state_h)
 
     except Exception as e:
         status = "failure"
