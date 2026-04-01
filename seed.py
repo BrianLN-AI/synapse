@@ -3,6 +3,8 @@ import sys
 import json
 import hashlib
 import time
+import glob
+import subprocess
 from pathlib import Path
 
 # --- Constants & Setup ---
@@ -99,7 +101,14 @@ def invoke(h: str, context: dict = None) -> dict:
             if l3_h and h != l3_h:
                 l3_payload = _raw_get(l3_h, is_bios=True)
                 # Pass full request_envelope to L3 for smarter planning
-                l3_scope = {"context": {"target": h, "request": request_envelope}, "log": lambda m: None, "result": None}
+                l3_scope = {
+                    "context": {"target": h, "request": request_envelope}, 
+                    "log": lambda m: None, 
+                    "result": None,
+                    "os": os,
+                    "glob": glob,
+                    "json": json
+                }
                 # Use l3_scope for both globals and locals to be safe
                 exec(l3_payload, l3_scope, l3_scope)
                 # UPDATE the plan with the results from the Broker
