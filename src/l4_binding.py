@@ -34,14 +34,22 @@ else:
                 result = f"Remote execution on {node} simulated."
             else:
                 if runtime == 'python':
-                    target_scope = {'context': target_context, 'log': log, 'result': None, 'execution_plan': target_plan, 'state': state, '__builtins__': __builtins__}
+                    target_scope = {
+                        'context': target_context, 
+                        'log': log, 
+                        'result': None, 
+                        'execution_plan': target_plan,
+                        'state': state,
+                        '__builtins__': __builtins__,
+                        'inference': inference, # INJECT COGNITIVE
+                        'embed': embed           # INJECT COGNITIVE
+                    }
                     exec(target_payload, target_scope, target_scope)
                     result = target_scope.get('result')
                     state = target_scope.get('state', state)
 
                 elif runtime == 'javascript':
                     import json, subprocess
-                    # FIXED: Escaped backticks to prevent Python SyntaxWarnings
                     js_wrapper = f"""
                     const context = {json.dumps(target_context)};
                     let state = {json.dumps(state)};

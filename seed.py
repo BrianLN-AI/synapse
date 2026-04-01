@@ -17,9 +17,28 @@ TELEMETRY_DIR.mkdir(exist_ok=True)
 # --- Cognitive Primitives (f_4 Symbiotic Leap) ---
 
 def inference(prompt: str) -> str:
-    """Mocked Inference: Simulates LLM reasoning."""
+    """Mocked Inference with Telemetry (f_5)."""
+    start_t = time.perf_counter()
     # In f_4 actual, this calls a local or remote model
-    return f"Simulated reasoning for: {prompt[:50]}..."
+    res = f"Simulated reasoning for: {prompt[:50]}..."
+    end_t = time.perf_counter()
+    
+    # Generate Cognitive Artifact
+    artifact = {
+        "type": "cognitive_artifact",
+        "prompt": prompt,
+        "response": res,
+        "latency": end_t - start_t,
+        "timestamp": time.time()
+    }
+    h = put(json.dumps(artifact), "cognitive/artifact")
+    
+    # Store reference in cognitive vault for easy scanning
+    path = VAULT_DIR / "cognitive" / h
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w') as f: f.write(h)
+    
+    return res
 
 def embed(text: str) -> list:
     """Mocked Embedding: Simulates vector generation."""
