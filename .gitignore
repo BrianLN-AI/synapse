@@ -1,1 +1,3 @@
-worktrees/
+blob_vault/
+__pycache__/
+*.pyc
