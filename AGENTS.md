@@ -19,7 +19,25 @@
 3. **Phase 3 (The Recursive Leap):** Migrate `discovery` and `planning` layers into Blobs.
 4. **Phase 4 (The Witnessing):** Integrate ZK proof artifacts into the promotion gate. See `ZK_PROTOCOL.md`.
 
-## 4. The Fitness Function ($f$)
+## 4. The Iteration Cycle
+
+Every f_N iteration follows this sequence:
+
+```
+evaluate → mutate → review → benchmark → promote → document
+```
+
+The `document` step is mandatory. At the end of each iteration:
+1. Identify the key decision(s) made in this cycle
+2. Write `docs/adr/ADR-NNN-<slug>.md` (or `CAP-NNN` / `LESSON-NNN`) for each
+3. Flag each: `[CHERRY-PICK CANDIDATE]`, `[BRANCH-ONLY]`, or `[LESSON — do not adopt]`
+4. Commit the findings alongside the code
+5. Move the iteration tag to include the findings commit
+
+See `ADR_WORK.md` in this worktree for the walking instructions for each tag point.
+See `docs/adr/` for the accumulated decision record.
+
+## 5. The Fitness Function ($f$)
 Optimize all logic for:
 $$f(Link) = \frac{SuccessRate \times Integrity}{Latency \times ComputeCost}$$
 
