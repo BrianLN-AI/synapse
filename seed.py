@@ -104,6 +104,30 @@ def main():
         h = sys.argv[2]
         ctx = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
         print(json.dumps(invoke(h, ctx), indent=2))
+        
+    elif cmd == "promote":
+        manifest_path = sys.argv[2]
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+        
+        # 1. Integrity Check (Verify all hashes in manifest exist)
+        print("Starting Integrity Check...")
+        for layer, h in manifest.get("layers", {}).items():
+            print(f"Verifying {layer}: {h}...")
+            try:
+                _raw_get(h)
+            except FileNotFoundError:
+                print(f"FAILED: Hash {h} for {layer} not found in vault!")
+                sys.exit(1)
+        
+        # 2. Store the manifest as a blob
+        manifest_h = put(json.dumps(manifest), "system/manifest")
+        
+        # 3. Update the global manifest pointer
+        with open("manifest.hash", "w") as f:
+            f.write(manifest_h)
+        
+        print(f"Successfully promoted manifest: {manifest_h}")
 
 if __name__ == "__main__":
     main()
