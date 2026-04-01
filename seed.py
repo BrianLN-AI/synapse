@@ -13,13 +13,53 @@ TELEMETRY_DIR.mkdir(exist_ok=True)
 
 # --- Core Protocol Methods ---
 
-def _raw_get(h: str) -> str:
-    """The BIOS Fallback: Direct filesystem lookup to prevent recursion."""
-    path = VAULT_DIR / h
-    if not path.exists():
-        raise FileNotFoundError(f"Blob {h} not found in BIOS.")
-    with open(path, 'r') as f:
-        return f.read()
+def _raw_get(h: str, is_bios: bool = False) -> str:
+    """The Linker Resolver: Checks L2 Discovery, falls back to BIOS."""
+    
+    # 1. BIOS Fallback: Direct filesystem lookup for system/bootstrap
+    # or if we are already in the process of resolving L2 itself.
+    if is_bios or not os.path.exists("manifest.hash"):
+        path = VAULT_DIR / h
+        if not path.exists():
+            raise FileNotFoundError(f"Blob {h} not found in BIOS.")
+        with open(path, 'r') as f:
+            return f.read()
+
+    # 2. Recursive Discovery (The Leap)
+    # Load current system root
+    with open("manifest.hash", "r") as f:
+        root_h = f.read().strip()
+    
+    manifest = json.loads(_raw_get(root_h, is_bios=True))
+    l2_h = manifest.get("layers", {}).get("l2")
+
+    if not l2_h:
+        # No Discovery Layer? Fail back to BIOS
+        return _raw_get(h, is_bios=True)
+    
+    # Avoid infinite recursion: If we're looking for L2 itself, use BIOS
+    if h == l2_h:
+        return _raw_get(h, is_bios=True)
+
+    # Use the L2 Blob to resolve the target hash
+    # Note: invoke() will call _raw_get(), so we need to prevent infinite loops
+    # here by carefully managing is_bios.
+    # To keep it simple for the Seed, we'll use a direct internal invoke.
+    try:
+        # We use a simplified internal invocation to avoid seed.invoke's overhead here
+        l2_payload = _raw_get(l2_h, is_bios=True)
+        l2_scope = {"context": {"target": h}, "log": lambda m: None, "result": None}
+        exec(l2_payload, {"__builtins__": __builtins__}, l2_scope)
+        
+        resolved_path = l2_scope.get("result", {}).get("path")
+        if resolved_path and os.path.exists(resolved_path):
+            with open(resolved_path, "r") as f:
+                return f.read()
+    except Exception as e:
+        # If Discovery fails, the Mycelium falls back to BIOS
+        pass
+
+    return _raw_get(h, is_bios=True)
 
 def put(payload: str, blob_type: str = "generic") -> str:
     """Content-Addressed Storage (SHA-256)."""
