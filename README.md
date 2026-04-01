@@ -69,3 +69,9 @@ We call this the **Synaptic Cleft**. In this fabric, code is not a static file; 
 
 ---
 *Logic exists in the Intermezzo—the space-between movement.*
+
+---
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 Brian Lloyd-Newberry
