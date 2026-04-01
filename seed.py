@@ -100,8 +100,11 @@ def invoke(h: str, context: dict = None) -> dict:
                 l3_payload = _raw_get(l3_h, is_bios=True)
                 # Pass full request_envelope to L3 for smarter planning
                 l3_scope = {"context": {"target": h, "request": request_envelope}, "log": lambda m: None, "result": None}
-                exec(l3_payload, {"__builtins__": __builtins__}, l3_scope)
-                execution_plan = l3_scope.get("result", execution_plan)
+                # Use l3_scope for both globals and locals to be safe
+                exec(l3_payload, l3_scope, l3_scope)
+                # UPDATE the plan with the results from the Broker
+                if l3_scope.get("result"):
+                    execution_plan = l3_scope["result"]
         except Exception:
             pass
 
