@@ -138,8 +138,14 @@ def arbitrate(candidates: list[dict], auto_enrich: bool = True) -> dict | None:
                 "success_rate":     measured.get("success_rate",    c.get("success_rate", 1.0)),
                 "latency_ms":       measured.get("avg_latency_ms",  c.get("latency_ms", 1.0)),
                 "cost":             max(measured.get("avg_memory_kb", c.get("cost", 1.0)), 0.001),
-                # invocation_count passed through so Planning v2 can apply Bayesian smoothing
+                # invocation_count for Bayesian smoothing (Planning v2+)
                 "invocation_count": measured.get("invocation_count", c.get("invocation_count", 0)),
+                # p95_latency_ms from telemetry-reader v2 — conservative tail-latency signal
+                # Planning v3 uses this as the latency input instead of avg_latency_ms
+                "p95_latency_ms":   measured.get("p95_latency_ms",  c.get("p95_latency_ms", None)),
+                # integrity from telemetry-reader v3 — recency-weighted success streak
+                # Default 0.5: unknown blobs are uncertain; proven blobs earn > 0.5 through use
+                "integrity":        measured.get("integrity",       c.get("integrity", 0.5)),
             })
         candidates = enriched
 

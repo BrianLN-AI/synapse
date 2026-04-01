@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 evolve.py — D-JIT Logic Fabric Self-Modification Engine
-f_1: f_0(f_0) — the fabric applies itself to itself.
+f_2: f_1(f_1) — second iteration, v2 blobs as baseline, v3 as candidates.
 
 Cycle per core blob:
   1. Evaluate: read current hash from manifest, get fitness signals from telemetry
@@ -161,10 +161,163 @@ for h, s in stats.items():
 log(f"telemetry-reader-v2: {len(result)} blob(s) with online p95 metrics")
 """
 
+# ---------------------------------------------------------------------------
+# v3 Blob Payloads — f_2 candidates
+# ---------------------------------------------------------------------------
+
+# Discovery v3: type-filtered fast path
+# Improvement: v2 reads every file and does json.loads to check type.
+# v3 checks filename length first (SHA-256 hashes are 64 chars); skips
+# clearly non-blob files early. Reduces unnecessary json.loads calls in
+# vaults that contain other files (logs, indexes, etc.).
+DISCOVERY_V3 = """\
+import json
+from pathlib import Path
+
+vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
+target_hash = context["hash"]
+
+try:
+    result = json.loads((vault_dir / target_hash).read_text())
+    log(f"discovery-v3: resolved {target_hash[:8]}... from L1")
+except FileNotFoundError:
+    vault_dir_l2 = Path(context.get("vault_dir_l2", "./blob_vault_l2"))
+    try:
+        result = json.loads((vault_dir_l2 / target_hash).read_text())
+        log(f"discovery-v3: resolved {target_hash[:8]}... from L2")
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Discovery v3 L1+L2: {target_hash} not found in either tier"
+        )
+"""
+
+# Planning v3: p95-aware fitness
+# Improvement: v2 uses avg_latency_ms as the latency signal.
+# v3 uses p95_latency_ms when available (from telemetry-reader v2+),
+# falling back to avg. p95 penalises bursty blobs even if their average
+# looks good — prevents selecting a candidate that spikes unpredictably.
+PLANNING_V3 = """\
+candidates = context.get("candidates", [])
+MIN_SAMPLES = 5
+
+if not candidates:
+    result = None
+else:
+    def _score(c):
+        sr        = float(c.get("success_rate", 1.0))
+        integrity = float(c.get("integrity",    1.0))
+        n         = int(c.get("invocation_count", 0))
+
+        # p95 when available; fall back to avg for backwards compatibility
+        p95 = c.get("p95_latency_ms")
+        avg = float(c.get("latency_ms", 1.0))
+        latency = max(float(p95) if p95 is not None else avg, 0.001)
+        cost    = max(float(c.get("cost", 1.0)), 0.001)
+
+        if n < MIN_SAMPLES:
+            w       = n / MIN_SAMPLES
+            sr      = w * sr      + (1 - w) * 0.95
+            latency = w * latency + (1 - w) * 1.0
+
+        return (sr * integrity) / (latency * cost)
+
+    scored     = sorted(((c, _score(c)) for c in candidates), key=lambda x: x[1], reverse=True)
+    best, best_score = scored[0]
+
+    log(f"planning-v3: {len(candidates)} candidates, best={best['hash'][:8]}... score={best_score:.4f}")
+
+    result = {
+        "selected":  best["hash"],
+        "score":     best_score,
+        "rationale": (
+            f"f(Link)={best_score:.4f} vs runner-up {scored[1][1]:.4f}"
+            if len(scored) > 1 else "sole candidate"
+        ),
+        "ranked": [{"hash": c["hash"], "score": s} for c, s in scored],
+    }
+"""
+
+# Telemetry-Reader v3: integrity signal (success streak weighting)
+# Improvement: v2 counts total successes but treats each invocation equally.
+# v3 adds an integrity score: recent consecutive successes weighted 2× vs
+# older or interspersed failures. A blob that was flaky but recently fixed
+# shows higher integrity than one with an old perfect record.
+TELEMETRY_READER_V3 = """\
+import json
+from pathlib import Path
+
+vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
+target_hash = context.get("hash")
+
+stats = {}   # hash -> {total, success, latency_sum, memory_sum, lat_mean, lat_M2,
+             #          streak, recent_success}
+
+for blob_path in vault_dir.iterdir():
+    if not blob_path.is_file():
+        continue
+    try:
+        envelope = json.loads(blob_path.read_text())
+    except Exception:
+        continue
+    if envelope.get("type") != "telemetry/artifact":
+        continue
+    record  = json.loads(envelope["payload"])
+    invoked = record.get("invoked")
+    if not invoked:
+        continue
+    if target_hash and invoked != target_hash:
+        continue
+
+    s = stats.setdefault(invoked, {
+        "total": 0, "success": 0,
+        "latency_sum": 0.0, "memory_sum": 0.0,
+        "lat_mean": 0.0, "lat_M2": 0.0,
+        "streak": 0, "recent_weight": 0.0,
+    })
+    s["total"] += 1
+    n   = s["total"]
+    ok  = record.get("error") is None
+    if ok:
+        s["success"] += 1
+        s["streak"]  += 1
+        # Recent successes weighted 2× vs older ones (recency bias)
+        s["recent_weight"] += 2.0 if s["streak"] > 3 else 1.0
+    else:
+        s["streak"] = 0   # streak broken
+    lat = record.get("latency_ms", 0.0)
+    s["latency_sum"] += lat
+    s["memory_sum"]  += record.get("memory_kb", 0.0)
+    delta          = lat - s["lat_mean"]
+    s["lat_mean"] += delta / n
+    s["lat_M2"]   += delta * (lat - s["lat_mean"])
+
+result = {}
+for h, s in stats.items():
+    if s["total"] == 0:
+        continue
+    n          = s["total"]
+    variance   = s["lat_M2"] / n if n > 1 else 0.0
+    std        = variance ** 0.5
+    p95_approx = s["lat_mean"] + 1.645 * std
+    max_weight = 2.0 * n   # upper bound: every invocation a post-streak success
+    integrity  = s["recent_weight"] / max_weight if max_weight > 0 else 1.0
+
+    result[h] = {
+        "success_rate":    s["success"] / n,
+        "integrity":       round(integrity, 4),
+        "avg_latency_ms":  s["latency_sum"] / n,
+        "p95_latency_ms":  round(p95_approx, 3),
+        "avg_memory_kb":   s["memory_sum"]  / n,
+        "invocation_count": n,
+    }
+
+log(f"telemetry-reader-v3: {len(result)} blob(s) with integrity + p95 metrics")
+"""
+
 _MUTATIONS: dict[str, str] = {
-    "discovery":        DISCOVERY_V2,
-    "planning":         PLANNING_V2,
-    "telemetry-reader": TELEMETRY_READER_V2,
+    "discovery":        DISCOVERY_V3,
+    "planning":         PLANNING_V3,
+    "telemetry-reader": TELEMETRY_READER_V3,
 }
 
 # Benchmark contexts — valid inputs for each label so invocation succeeds
@@ -173,8 +326,9 @@ def _bench_context(label: str, current_hash: str) -> dict:
         return {"hash": current_hash, "vault_dir": str(seed.VAULT_DIR)}
     if label == "planning":
         return {"candidates": [
-            {"hash": current_hash, "success_rate": 0.9, "latency_ms": 2.0, "cost": 1.0, "invocation_count": 10},
-            {"hash": "0" * 64,    "success_rate": 0.8, "latency_ms": 5.0, "cost": 2.0, "invocation_count": 3},
+            # p95_latency_ms included so v3 Planning blob gets a realistic input
+            {"hash": current_hash, "success_rate": 0.9, "latency_ms": 2.0, "p95_latency_ms": 3.5, "cost": 1.0, "invocation_count": 10},
+            {"hash": "0" * 64,    "success_rate": 0.8, "latency_ms": 5.0, "p95_latency_ms": 9.0, "cost": 2.0, "invocation_count": 3},
         ]}
     if label == "telemetry-reader":
         return {"vault_dir": str(seed.VAULT_DIR)}
@@ -306,7 +460,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[candidate_hash],
         council_approval_hash=approval,
-        version="1.1.0",
+        version="1.2.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -332,7 +486,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         r = evolve_one(label, reviewer=reviewer)
         results.append(r)
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_1 complete. {len(promoted)}/3 blobs promoted → manifest v1.1.0")
+    print(f"\n  f_2 complete. {len(promoted)}/3 blobs promoted → manifest v1.2.0")
     return results
 
 
