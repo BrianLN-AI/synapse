@@ -44,6 +44,30 @@ def index_blob(h: str, description: str):
     idx[h] = {"hash": h, "description": description, "vector": embed(description)}
     with open(SEMANTIC_INDEX, 'w') as f: json.dump(idx, f)
 
+# --- Security & Governance (f_4 Symbiotic Leap) ---
+
+def propose(mutation: dict) -> str:
+    """Saves a draft manifest as a Proposal."""
+    proposal_h = hashlib.sha256(json.dumps(mutation).encode()).hexdigest()
+    path = VAULT_DIR / "proposals" / proposal_h
+    with open(path, 'w') as f: json.dump(mutation, f)
+    return proposal_h
+
+def sign(proposal_id: str, node_id: str = "local-node") -> str:
+    """Simulates a cryptographic signature on a proposal."""
+    sig_data = {"proposal_id": proposal_id, "node_id": node_id, "timestamp": time.time()}
+    sig_h = hashlib.sha256(json.dumps(sig_data).encode()).hexdigest()
+    path = VAULT_DIR / "signatures" / proposal_id / f"{node_id}.sig"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w') as f: json.dump(sig_data, f)
+    return sig_h
+
+def tally(proposal_id: str) -> int:
+    """Counts valid signatures for a proposal."""
+    path = VAULT_DIR / "signatures" / proposal_id
+    if not path.exists(): return 0
+    return len(list(path.glob("*.sig")))
+
 # --- Core Protocol Methods ---
 
 def _raw_get(h: str, is_bios: bool = False) -> str:
@@ -218,6 +242,14 @@ def main():
         # seed.py index <hash> <description>
         index_blob(sys.argv[2], sys.argv[3])
         print(f"Indexed: {sys.argv[2]}")
+    elif cmd == "sign":
+        # seed.py sign <proposal_id> <node_id>
+        node = sys.argv[3] if len(sys.argv) > 3 else "local-node"
+        sig = sign(sys.argv[2], node)
+        print(f"Signed {sys.argv[2]} as {node}: {sig}")
+    elif cmd == "tally":
+        # seed.py tally <proposal_id>
+        print(f"Signatures for {sys.argv[2]}: {tally(sys.argv[2])}")
     elif cmd == "invoke":
         h = sys.argv[2]
         ctx = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
@@ -238,9 +270,25 @@ def main():
                 print(json.dumps(response), flush=True)
             except Exception as e: print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": str(e)}}), flush=True)
     elif cmd == "promote":
-        with open(sys.argv[2], 'r') as f: manifest = json.load(f)
+        # Usage: seed.py promote <proposal_id> <min_signatures>
+        proposal_id = sys.argv[2]
+        min_sigs = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+        
+        proposal_path = VAULT_DIR / "proposals" / proposal_id
+        if not proposal_path.exists():
+            # Fallback for manual legacy promotion
+            with open(sys.argv[2], 'r') as f: manifest = json.load(f)
+        else:
+            # Formal Governance Promotion
+            current_sigs = tally(proposal_id)
+            if current_sigs < min_sigs:
+                print(f"FAILED: Proposal {proposal_id} has only {current_sigs}/{min_sigs} signatures. Consensus not reached.")
+                sys.exit(1)
+            with open(proposal_path, 'r') as f: manifest = json.load(f)
+
         for name, versions in manifest.get("capabilities", {}).items():
             for ver, h in versions.items(): _raw_get(h)
+        
         h = put(json.dumps(manifest), "system/manifest")
         with open("manifest.hash", "w") as f: f.write(h)
         print(f"Successfully promoted: {h}")
