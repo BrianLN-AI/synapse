@@ -1,48 +1,74 @@
 # Synapse: The D-JIT Logic Fabric
 
-**Status:** `f_2` (Agentic Mesh - Phase 2)  
-**Version:** 1.2.0-Beta  
+**Status:** `f_2` (Agentic Mesh)  
+**Latest Baseline:** [f_1 (1.1.0-Stable)](https://github.com/BrianLN-AI/synapse/tree/f_1)  
 **Foundation:** Content-Addressed, Protocol-Oriented Compute Mesh
 
-## 🧠 The Vision
-Synapse is a multidisciplinary compute fabric that treats code, data, and inference as immutable **Blobs**. Inspired by neurobiology (Synapses), mycology (Mycelial Substrates), and philosophy (Rhizomatic Intermezzos), the fabric's intelligence resides not in its nodes, but in the **Gaps** (The Linker) between them.
+---
 
-## 🚀 The Journey So Far
+## 🧠 The "Why": Philosophy of the Cleft
 
-### `f_0`: The Wavefunction Collapse (The Foundation)
-The system began as `f(undefined)`, a field of potentiality. We collapsed it into a stable **Seed Linker** capable of a "Cold Boot" via a BIOS fallback.
-- **Strict ABI:** Every blob must assign its return value to a `result` variable.
-- **The 4-Layer Stack:** Interface (L1), Discovery (L2), Planning (L3), and Binding (L4).
-- **Recursive Leap:** The Linker uses the fabric to find and execute the fabric itself.
+Traditional computing is obsessed with **Nodes** (servers, functions, containers). **Synapse** shift the focus to the **Gaps**—the space between nodes where logic is negotiated, brokered, and bound. 
 
-### `f_1`: The Distributed Leap (The Substrate)
-We evolved the local seed into a distributed system.
-- **Multi-Vault Discovery:** Hashes now resolve across local and remote tiers.
-- **Polyglot Engine:** Support for both Python (`exec`) and JavaScript (`node -e`) runtimes.
-- **Market Arbitrage:** The L3 Broker performs cost vs. latency trade-offs to select the optimal execution node.
+We call this the **Synaptic Cleft**. In this fabric, code is not a static file; it is a [Wavefunction](https://en.wikipedia.org/wiki/Wave_function) of potentiality that only "collapses" into a result at the moment of invocation.
 
-### `f_2`: The Agentic Mesh (The Living Fabric) - *Current*
-The fabric is becoming "alive" through self-reflection.
-- **Self-Correction:** Autonomous retry loops with exponential backoff in L4.
-- **Dynamic Plasticity:** The L3 Broker now "learns" from telemetry. It autonomously penalizes slow or failing nodes by increasing their latency weight in real-time.
-
-## 🛠 How It Works
-
-1. **PUT**: Store logic in the content-addressed `blob_vault`.
-   ```bash
-   python3 seed.py put logic.py # Returns SHA-256 Hash
-   ```
-2. **INVOKE**: The Linker negotiates the execution of a hash.
-   ```bash
-   python3 seed.py invoke <hash> '{"params": {"priority": "high"}}'
-   ```
-3. **TELEMETRY**: Every invocation generates a content-addressed artifact documenting the request envelope, execution plan, logs, and performance metrics.
-
-## 🛤 What's Next?
-
-- **`f_2` Phase 3: Formal Protocol**: Implementing an **MCP (Model Context Protocol)** server to expose the fabric's blobs as tools for external LLMs.
-- **`f_2` Phase 4: Memory**: Enabling persistent state blobs that allow logic to "remember" between invocations.
-- **`f_3`: Collective Intelligence**: Bridging multiple Synapse fabrics into a global, peer-to-peer compute substrate.
+### Core Metaphors
+*   **The Synapse (Neurobiology):** The site of transmission. Intelligence emerges from the weight and plasticity of the connection, not the storage of the data.
+*   **The Mycelium (Mycology):** A persistent, underground [Substrate](https://en.wikipedia.org/wiki/Substrate_(mycology)) (`blob_vault`) that feeds the entire system.
+*   **The Rhizome (Philosophy):** A non-hierarchical system (from [Deleuze & Guattari](https://en.wikipedia.org/wiki/Rhizome_(philosophy))) where any point can connect to any other point.
 
 ---
-*The fabric moves in the Intermezzo—the space between.*
+
+## 📖 Lexicon & Definitions
+
+*   **D-JIT (Distributed Just-In-Time):** A runtime that resolves, plans, and executes logic across a distributed mesh exactly when needed.
+*   **Blob:** An immutable, content-addressed unit of logic or data. Identified by its [SHA-256](https://en.wikipedia.org/wiki/SHA-2) hash.
+*   **ABI (Application Binary Interface):** The strict contract for Blobs. In Synapse, every blob *must* assign its output to a `result` variable and use the provided `log()` sink.
+*   **GOKR (Goals, Objectives, and Key Results):** Our framework for architectural success.
+*   **BIOS (Basic Input/Output System):** The hardcoded fallback mechanism that allows the Linker to "Cold Boot" (start from scratch) without infinite recursion.
+*   **The Linker:** The brain of the system. It coordinates the 4-layer stack to transform a Hash into a Result.
+
+---
+
+## 🚀 The Evolutionary Journey
+
+### [f_0: The Wavefunction Collapse](https://github.com/BrianLN-AI/synapse/tree/af6b1e02)
+**Goal:** Establish the baseline "Seed" and the 4-Layer Stack.
+*   **The Leap:** Transitioned from "Unknown" potential to a functional Python Linker.
+*   **Key Achievement:** Implemented the **Recursive Leap**, where the Linker uses the fabric to find the layers (Interface, Discovery, Planning, Binding) it needs to execute the fabric.
+*   **Tag:** `f_0` ([af6b1e02](https://github.com/BrianLN-AI/synapse/commit/af6b1e02))
+
+### [f_1: The Distributed Leap](https://github.com/BrianLN-AI/synapse/tree/1e4dadbd)
+**Goal:** Expand the fabric beyond a single local vault.
+*   **Distributed Discovery:** L2 can now resolve hashes across multiple "Vault Tiers" (Local vs. Remote).
+*   **Polyglot Runtime:** L4 evolved to support both **Python** (`exec`) and **JavaScript** ([Node.js](https://nodejs.org/)).
+*   **Market Arbitrage:** L3 began acting as a **Broker**, choosing nodes based on Cost vs. Latency.
+*   **Tag:** `f_1` ([1e4dadbd](https://github.com/BrianLN-AI/synapse/commit/1e4dadbd))
+
+### [f_2: The Agentic Mesh](https://github.com/BrianLN-AI/synapse/tree/f_2) (Current)
+**Goal:** Enable self-reflection and autonomous optimization.
+*   **Self-Correction:** L4 now implements **Autonomous Retries** with exponential backoff.
+*   **Dynamic Plasticity:** L3 now "learns." It scans telemetry artifacts to autonomously penalize failing nodes and reinforce successful links.
+*   **Current Hash:** [ec8a2898](https://github.com/BrianLN-AI/synapse/commit/ec8a2898)
+
+---
+
+## 🛠 Architectural Blueprint: The 4-Layer Stack
+
+| Layer | Name | Responsibility |
+| :--- | :--- | :--- |
+| **L1** | **Interface** | The Proxy. Normalizes intent, validates requests, and tags with `trace_id`. |
+| **L2** | **Discovery** | The Librarian. Resolves Content-Hashes across the Mycelial Substrate (Vault Tiers). |
+| **L3** | **Planning** | The Broker. Performs Market Arbitrage. Selects the Node/Runtime based on the Fitness Function. |
+| **L4** | **Binding** | The Engine. Physically injects the Blob into a scrubbed sandbox and handles retries. |
+
+---
+
+## 🛤 The Road to f_3 (Collective Intelligence)
+
+1.  **Formal Protocol (MCP):** Integrating the [Model Context Protocol](https://modelcontextprotocol.io/) to let external LLMs call Synapse tools.
+2.  **Persistent Memory:** Enabling Blobs to store state between invocations.
+3.  **Global Fabric:** Bridging independent Synapse instances into a P2P compute mesh.
+
+---
+*Logic exists in the Intermezzo—the space-between movement.*
