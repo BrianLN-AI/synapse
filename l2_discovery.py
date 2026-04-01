@@ -1,7 +1,11 @@
+import os
 target = context.get('target')
-vault_path = 'blob_vault'
-if target:
-    log(f'L2: Resolving hash {target}...')
-    result = {'status': 'found', 'path': f'{vault_path}/{target}'}
-else:
-    result = {'status': 'error', 'message': 'No target hash provided'}
+tiers = context.get('vault_tiers', ['blob_vault'])
+log(f'L2: Multi-Vault Resolution for {target}...')
+result = {'status': 'not_found'}
+for tier in tiers:
+    log(f'L2: Searching tier: {tier}...')
+    path = f'{tier}/{target}'
+    if os.path.exists(path):
+        result = {'status': 'found', 'path': path, 'tier': tier}
+        break

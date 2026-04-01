@@ -42,21 +42,18 @@ def _raw_get(h: str, is_bios: bool = False) -> str:
         return _raw_get(h, is_bios=True)
 
     # Use the L2 Blob to resolve the target hash
-    # Note: invoke() will call _raw_get(), so we need to prevent infinite loops
-    # here by carefully managing is_bios.
-    # To keep it simple for the Seed, we'll use a direct internal invoke.
     try:
-        # We use a simplified internal invocation to avoid seed.invoke's overhead here
+        # Pass vault_tiers to L2 (Simulated Tiered Discovery)
+        vault_tiers = ["blob_vault", "remote_vault"]
         l2_payload = _raw_get(l2_h, is_bios=True)
-        l2_scope = {"context": {"target": h}, "log": lambda m: None, "result": None}
-        exec(l2_payload, {"__builtins__": __builtins__}, l2_scope)
+        l2_scope = {"context": {"target": h, "vault_tiers": vault_tiers}, "log": lambda m: None, "result": None}
+        exec(l2_payload, {"import os": os, "__builtins__": __builtins__}, l2_scope)
         
         resolved_path = l2_scope.get("result", {}).get("path")
         if resolved_path and os.path.exists(resolved_path):
             with open(resolved_path, "r") as f:
                 return f.read()
     except Exception as e:
-        # If Discovery fails, the Mycelium falls back to BIOS
         pass
 
     return _raw_get(h, is_bios=True)
