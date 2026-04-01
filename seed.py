@@ -17,8 +17,6 @@ TELEMETRY_DIR.mkdir(exist_ok=True)
 
 def _raw_get(h: str, is_bios: bool = False) -> str:
     """The Linker Resolver: Checks L2 Discovery, falls back to BIOS."""
-    
-    # 1. BIOS Fallback: Direct filesystem lookup
     if is_bios or not os.path.exists("manifest.hash"):
         path = VAULT_DIR / h
         if not path.exists() or not path.is_file():
@@ -26,284 +24,170 @@ def _raw_get(h: str, is_bios: bool = False) -> str:
         with open(path, 'r') as f:
             return f.read()
 
-    # 2. Recursive Discovery (The Leap)
-    # Load current system root
+    # Recursive Discovery
     with open("manifest.hash", "r") as f:
         root_h = f.read().strip()
-    
     manifest = json.loads(_raw_get(root_h, is_bios=True))
-    l2_h = manifest.get("layers", {}).get("l2")
+    l2_h = manifest.get("capabilities", {}).get("librarian", {}).get("stable")
 
-    if not l2_h:
-        # No Discovery Layer? Fail back to BIOS
-        return _raw_get(h, is_bios=True)
-    
-    # Avoid infinite recursion: If we're looking for L2 itself, use BIOS
-    if h == l2_h:
+    if not l2_h or h == l2_h:
         return _raw_get(h, is_bios=True)
 
-    # Use the L2 Blob to resolve the target hash
     try:
-        # Pass vault_tiers to L2 (Simulated Tiered Discovery)
         vault_tiers = ["blob_vault", "remote_vault"]
         l2_payload = _raw_get(l2_h, is_bios=True)
         l2_scope = {"context": {"target": h, "vault_tiers": vault_tiers}, "log": lambda m: None, "result": None}
-        exec(l2_payload, {"import os": os, "__builtins__": __builtins__}, l2_scope)
-        
+        exec(l2_payload, l2_scope, l2_scope)
         resolved_path = l2_scope.get("result", {}).get("path")
         if resolved_path and os.path.exists(resolved_path):
             with open(resolved_path, "r") as f:
                 return f.read()
-    except Exception as e:
-        pass
-
+    except Exception: pass
     return _raw_get(h, is_bios=True)
 
 def put(payload: str, blob_type: str = "generic") -> str:
     """Content-Addressed Storage (SHA-256)."""
     h = hashlib.sha256(payload.encode()).hexdigest()
     path = VAULT_DIR / h
-    with open(path, 'w') as f:
-        f.write(payload)
+    with open(path, 'w') as f: f.write(payload)
     return h
+
+def _resolve_capability(name: str, version: str = "stable") -> str:
+    """Translates a semantic capability name into a Content-Hash via the Registry."""
+    if not os.path.exists("manifest.hash"): return None
+    try:
+        with open("manifest.hash", "r") as f: root_h = f.read().strip()
+        manifest = json.loads(_raw_get(root_h, is_bios=True))
+        return manifest.get("capabilities", {}).get(name, {}).get(version)
+    except Exception: return None
 
 def invoke(h: str, context: dict = None) -> dict:
     """The Engine: Executes a Blob in a scrubbed sandbox."""
     start_time = time.perf_counter()
     context = context or {}
     
-    # 1. Interface Normalization (The Interface Leap)
-    # Check for manifest and L1 to normalize the incoming context
+    # 1. Proxy Normalization
     request_envelope = context
-    if os.path.exists("manifest.hash"):
+    proxy_h = _resolve_capability("proxy")
+    if proxy_h and h != proxy_h:
         try:
-            with open("manifest.hash", "r") as f:
-                root_h = f.read().strip()
-            manifest = json.loads(_raw_get(root_h, is_bios=True))
-            l1_h = manifest.get("layers", {}).get("l1")
-            if l1_h and h != l1_h:
-                l1_payload = _raw_get(l1_h, is_bios=True)
-                l1_scope = {"context": {"request": context, "timestamp": time.time(), "trace_id": "syn-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]}, "log": lambda m: None, "result": None}
-                exec(l1_payload, {"__builtins__": __builtins__}, l1_scope)
-                request_envelope = l1_scope.get("result", request_envelope)
-        except Exception:
-            pass
+            l1_payload = _raw_get(proxy_h, is_bios=True)
+            l1_scope = {
+                "context": {"request": context, "timestamp": time.time(), "trace_id": "syn-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]}, 
+                "log": lambda m: None, "result": None, "__builtins__": __builtins__
+            }
+            exec(l1_payload, l1_scope, l1_scope)
+            request_envelope = l1_scope.get("result", request_envelope)
+        except Exception: pass
 
-    # 2. Broker Consultation (The Broker Leap)
+    # 2. Broker Planning
     execution_plan = {"method": "local_exec", "sandbox": "standard"}
-    if os.path.exists("manifest.hash"):
+    broker_h = _resolve_capability("broker")
+    if broker_h and h != broker_h:
         try:
-            with open("manifest.hash", "r") as f:
-                root_h = f.read().strip()
-            manifest = json.loads(_raw_get(root_h, is_bios=True))
-            l3_h = manifest.get("layers", {}).get("l3")
-            if l3_h and h != l3_h:
-                l3_payload = _raw_get(l3_h, is_bios=True)
-                # Pass full request_envelope to L3 for smarter planning
-                l3_scope = {
-                    "context": {"target": h, "request": request_envelope}, 
-                    "log": lambda m: None, 
-                    "result": None,
-                    "os": os,
-                    "glob": glob,
-                    "json": json
-                }
-                # Use l3_scope for both globals and locals to be safe
-                exec(l3_payload, l3_scope, l3_scope)
-                # UPDATE the plan with the results from the Broker
-                if l3_scope.get("result"):
-                    execution_plan = l3_scope["result"]
-        except Exception:
-            pass
+            l3_payload = _raw_get(broker_h, is_bios=True)
+            l3_scope = {
+                "context": {"target": h, "request": request_envelope}, 
+                "log": lambda m: None, "result": None, "os": os, "glob": glob, "json": json, "__builtins__": __builtins__
+            }
+            exec(l3_payload, l3_scope, l3_scope)
+            if l3_scope.get("result"): execution_plan = l3_scope["result"]
+        except Exception: pass
 
-    # 3. State Resolution (The Persistent Substrate)
+    # 3. State Resolution
     state = {}
     state_id = request_envelope.get("params", {}).get("state_id")
     state_file = VAULT_DIR / "state" / str(state_id) if state_id else None
-    
     if state_id and state_file.exists():
         try:
             with open(state_file, "r") as f:
                 state_h = f.read().strip()
-            state = json.loads(_raw_get(state_h, is_bios=True))
-        except Exception:
-            pass
+                state = json.loads(_raw_get(state_h, is_bios=True))
+        except Exception: pass
 
-    # 4. Binding (The Engine)
+    # 4. Binding & Execution
     payload = _raw_get(h)
-    
-    # Telemetry Sink
     logs = []
-    def log(msg):
-        logs.append(f"[{time.time()}] {msg}")
+    def log(msg): logs.append(f"[{time.time()}] {msg}")
 
-    # Use Layer 4 (L4) Binding if available (The Binding Leap)
     try:
-        if os.path.exists("manifest.hash"):
-            with open("manifest.hash", "r") as f:
-                root_h = f.read().strip()
-            manifest = json.loads(_raw_get(root_h, is_bios=True))
-            l4_h = manifest.get("layers", {}).get("l4")
-            if l4_h and h != l4_h:
-                l4_payload = _raw_get(l4_h, is_bios=True)
-                # Pass payload, plan, AND state to L4
-                l4_scope = {
-                    "context": {
-                        "target_payload": payload,
-                        "target_context": request_envelope,
-                        "execution_plan": execution_plan,
-                        "state": state # Inject current state
-                    },
-                    "log": log,
-                    "result": None,
-                    "subprocess": subprocess,
-                    "json": json
-                }
-                exec(l4_payload, l4_scope, l4_scope)
-                result = l4_scope.get("result")
-                # Capture updated state from L4
-                state = l4_scope.get("context", {}).get("state", state)
-                status = "success"
-                error = None
-            else:
-                # Fallback to direct execution
-                local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state}
-                exec(payload, local_scope, local_scope)
-                result = local_scope.get("result")
-                state = local_scope.get("state", state)
-                status = "success"
-                error = None
+        engine_h = _resolve_capability("engine")
+        if engine_h and h != engine_h:
+            l4_payload = _raw_get(engine_h, is_bios=True)
+            l4_scope = {
+                "context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state},
+                "log": log, "result": None, "subprocess": subprocess, "json": json,
+                "__builtins__": __builtins__ # Critical fix
+            }
+            exec(l4_payload, l4_scope, l4_scope)
+            result = l4_scope.get("result")
+            state = l4_scope.get("context", {}).get("state", state)
         else:
-            # Fallback for no manifest (BIOS)
-            local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state}
+            local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": __builtins__}
             exec(payload, local_scope, local_scope)
             result = local_scope.get("result")
             state = local_scope.get("state", state)
-            status = "success"
-            error = None
+
             
-        if result is None:
-            raise ValueError(f"Blob {h} violated ABI: No 'result' assigned.")
+        if result is None: raise ValueError(f"Blob {h} violated ABI: No 'result' assigned.")
 
         # 5. State Persistence
         if state_id:
             state_h = put(json.dumps(state), "system/state")
             state_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(state_file, "w") as f:
-                f.write(state_h)
+            with open(state_file, "w") as f: f.write(state_h)
 
+        status = "success"
+        error = None
     except Exception as e:
         status = "failure"
         error = str(e)
         result = None
 
     end_time = time.perf_counter()
-    
-    # Telemetry Artifact
-    telemetry = {
-        "blob_hash": h,
-        "request_envelope": request_envelope,
-        "execution_plan": execution_plan,
-        "status": status,
-        "latency": end_time - start_time,
-        "logs": logs,
-        "error": error,
-        "timestamp": time.time()
-    }
-    
-    # PUT telemetry/artifact blob
-    telemetry_h = put(json.dumps(telemetry), "telemetry/artifact")
-    
-    return {
-        "result": result,
-        "telemetry_hash": telemetry_h,
-        "status": status
-    }
+    telemetry = {"blob_hash": h, "request_envelope": request_envelope, "execution_plan": execution_plan, "status": status, "latency": end_time - start_time, "logs": logs, "error": error, "timestamp": time.time()}
+    put(json.dumps(telemetry), "telemetry/artifact")
+    return {"result": result, "status": status}
 
 # --- CLI Interface ---
 
 def main():
     if len(sys.argv) < 2:
         print("Usage: seed.py <command> [args]")
-        print("Commands: put <file/payload>, invoke <hash> [json_context]")
         sys.exit(1)
 
     cmd = sys.argv[1]
-    
     if cmd == "put":
         payload = sys.argv[2]
         if os.path.exists(payload):
-            with open(payload, 'r') as f:
-                payload = f.read()
+            with open(payload, 'r') as f: payload = f.read()
         print(put(payload))
-        
     elif cmd == "invoke":
         h = sys.argv[2]
         ctx = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
         print(json.dumps(invoke(h, ctx), indent=2))
-        
     elif cmd == "mcp":
-        # Model Context Protocol (MCP) Stdio Loop
-        # Listens for JSON-RPC on stdin
         for line in sys.stdin:
             try:
                 request = json.loads(line)
-                method = request.get("method")
-                params = request.get("params", {})
-                req_id = request.get("id")
-
+                method, params, req_id = request.get("method"), request.get("params", {}), request.get("id")
                 if method == "tools/list":
-                    # Resolve manifest to show available layers as tools
-                    with open("manifest.hash", "r") as f:
-                        root_h = f.read().strip()
+                    with open("manifest.hash", "r") as f: root_h = f.read().strip()
                     manifest = json.loads(_raw_get(root_h, is_bios=True))
-                    response = {
-                        "jsonrpc": "2.0",
-                        "id": req_id,
-                        "result": {
-                            "tools": [{"name": k, "hash": v} for k, v in manifest.get("layers", {}).items()]
-                        }
-                    }
+                    response = {"jsonrpc": "2.0", "id": req_id, "result": {"tools": [{"name": k, "versions": list(v.keys())} for k, v in manifest.get("capabilities", {}).items()]}}
                 elif method == "tools/call":
-                    # Call a specific hash or layer name
-                    tool_hash = params.get("name") # In Synapse, tool name can be the hash
-                    tool_params = params.get("arguments", {})
-                    res = invoke(tool_hash, {"params": tool_params, "intent": "mcp_call"})
-                    response = {
-                        "jsonrpc": "2.0",
-                        "id": req_id,
-                        "result": res
-                    }
-                else:
-                    response = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": "Method not found"}}
-                
+                    res = invoke(params.get("name"), {"params": params.get("arguments", {}), "intent": "mcp_call"})
+                    response = {"jsonrpc": "2.0", "id": req_id, "result": res}
+                else: response = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": "Method not found"}}
                 print(json.dumps(response), flush=True)
-            except Exception as e:
-                print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": str(e)}}), flush=True)
-
+            except Exception as e: print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": str(e)}}), flush=True)
     elif cmd == "promote":
-        manifest_path = sys.argv[2]
-        with open(manifest_path, 'r') as f:
-            manifest = json.load(f)
-        
-        # 1. Integrity Check (Verify all hashes in manifest exist)
-        print("Starting Integrity Check...")
-        for layer, h in manifest.get("layers", {}).items():
-            print(f"Verifying {layer}: {h}...")
-            try:
-                _raw_get(h)
-            except FileNotFoundError:
-                print(f"FAILED: Hash {h} for {layer} not found in vault!")
-                sys.exit(1)
-        
-        # 2. Store the manifest as a blob
-        manifest_h = put(json.dumps(manifest), "system/manifest")
-        
-        # 3. Update the global manifest pointer
-        with open("manifest.hash", "w") as f:
-            f.write(manifest_h)
-        
-        print(f"Successfully promoted manifest: {manifest_h}")
+        with open(sys.argv[2], 'r') as f: manifest = json.load(f)
+        for name, versions in manifest.get("capabilities", {}).items():
+            for ver, h in versions.items():
+                _raw_get(h) # Integrity check
+        h = put(json.dumps(manifest), "system/manifest")
+        with open("manifest.hash", "w") as f: f.write(h)
+        print(f"Successfully promoted: {h}")
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
