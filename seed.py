@@ -72,6 +72,28 @@ def put(payload: str, blob_type: str = "generic") -> str:
 def invoke(h: str, context: dict = None) -> dict:
     """The Engine: Executes a Blob in a scrubbed sandbox."""
     start_time = time.perf_counter()
+    
+    # 1. Broker Consultation (The Broker Leap)
+    # Check if a manifest and L3 exist to provide an execution plan
+    execution_plan = {"method": "local_exec", "sandbox": "standard"}
+    if os.path.exists("manifest.hash"):
+        try:
+            with open("manifest.hash", "r") as f:
+                root_h = f.read().strip()
+            manifest = json.loads(_raw_get(root_h, is_bios=True))
+            l3_h = manifest.get("layers", {}).get("l3")
+            if l3_h:
+                # Avoid infinite recursion: don't broker the broker
+                if h != l3_h:
+                    l3_payload = _raw_get(l3_h, is_bios=True)
+                    l3_scope = {"context": {"target": h, "priority": context.get("priority", "normal")}, "log": lambda m: None, "result": None}
+                    exec(l3_payload, {"__builtins__": __builtins__}, l3_scope)
+                    execution_plan = l3_scope.get("result", execution_plan)
+        except Exception:
+            # Fallback to standard if brokering fails
+            pass
+
+    # 2. Binding (The Engine)
     payload = _raw_get(h)
     
     # Telemetry Sink
@@ -80,11 +102,11 @@ def invoke(h: str, context: dict = None) -> dict:
         logs.append(f"[{time.time()}] {msg}")
 
     # The Scrubbed Scope (The ABI)
-    # Blobs must assign their final value to 'result'
     local_scope = {
         "context": context or {},
         "log": log,
-        "result": None
+        "result": None,
+        "execution_plan": execution_plan # Inject the plan for context
     }
     
     try:
@@ -107,6 +129,7 @@ def invoke(h: str, context: dict = None) -> dict:
     # Telemetry Artifact
     telemetry = {
         "blob_hash": h,
+        "execution_plan": execution_plan,
         "status": status,
         "latency": end_time - start_time,
         "logs": logs,
