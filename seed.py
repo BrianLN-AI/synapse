@@ -94,15 +94,28 @@ def invoke(h: str, context: dict = None) -> dict:
             if l3_scope.get("result"): execution_plan = l3_scope["result"]
         except Exception: pass
 
-    # 3. State Resolution
+    # 3. State Resolution (Collective Substrate)
     state = {}
     state_id = request_envelope.get("params", {}).get("state_id")
     state_file = VAULT_DIR / "state" / str(state_id) if state_id else None
-    if state_id and state_file.exists():
+    collective_state_file = Path("collective_vault") / "state" / str(state_id) if state_id else None
+
+    # Sync from Collective first (The Shared Memory)
+    if state_id and collective_state_file and collective_state_file.exists():
+        try:
+            with open(collective_state_file, "r") as f:
+                state_h = f.read().strip()
+            state = json.loads(_raw_get(state_h, is_bios=True))
+            # Cache locally
+            if state_file:
+                state_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(state_file, "w") as f: f.write(state_h)
+        except Exception: pass
+    elif state_id and state_file and state_file.exists():
         try:
             with open(state_file, "r") as f:
                 state_h = f.read().strip()
-                state = json.loads(_raw_get(state_h, is_bios=True))
+            state = json.loads(_raw_get(state_h, is_bios=True))
         except Exception: pass
 
     # 4. Binding & Execution
@@ -116,8 +129,7 @@ def invoke(h: str, context: dict = None) -> dict:
             l4_payload = _raw_get(engine_h, is_bios=True)
             l4_scope = {
                 "context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state},
-                "log": log, "result": None, "subprocess": subprocess, "json": json,
-                "__builtins__": __builtins__ # Critical fix
+                "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__
             }
             exec(l4_payload, l4_scope, l4_scope)
             result = l4_scope.get("result")
@@ -128,14 +140,19 @@ def invoke(h: str, context: dict = None) -> dict:
             result = local_scope.get("result")
             state = local_scope.get("state", state)
 
-            
         if result is None: raise ValueError(f"Blob {h} violated ABI: No 'result' assigned.")
 
-        # 5. State Persistence
+        # 5. State Persistence & Collective Push
         if state_id:
             state_h = put(json.dumps(state), "system/state")
+            # Persist Local
             state_file.parent.mkdir(parents=True, exist_ok=True)
             with open(state_file, "w") as f: f.write(state_h)
+            # Push to Collective
+            if collective_state_file:
+                collective_state_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(collective_state_file, "w") as f: f.write(state_h)
+
 
         status = "success"
         error = None
