@@ -122,6 +122,25 @@ def _resolve_capability(name: str, version: str = "stable") -> str:
         return manifest.get("capabilities", {}).get(name, {}).get(version)
     except Exception: return None
 
+def _invoke_jury(proposal_id: str) -> dict:
+    """Internal: Invokes the Jury capability to evaluate a proposal."""
+    jury_h = _resolve_capability("jury")
+    if not jury_h: return {"status": "error", "message": "No Jury capability found"}
+    
+    try:
+        jury_payload = _raw_get(jury_h, is_bios=True)
+        # Jury needs access to raw_get to read the proposal and new blobs
+        jury_scope = {
+            "context": {"proposal_id": proposal_id},
+            "log": lambda m: None, "result": None,
+            "inference": inference, "sign": sign, "tally": tally,
+            "_raw_get": _raw_get, "json": json, "os": os, "__builtins__": __builtins__
+        }
+        exec(jury_payload, jury_scope, jury_scope)
+        return {"status": "success", "result": jury_scope.get("result")}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 def invoke(h: str, context: dict = None) -> dict:
     """The Engine: Executes a Blob in a scrubbed sandbox."""
     start_time = time.perf_counter()
@@ -152,7 +171,8 @@ def invoke(h: str, context: dict = None) -> dict:
                 "context": {"target": h, "request": request_envelope}, 
                 "log": lambda m: None, "result": None, 
                 "os": os, "glob": glob, "json": json, "__builtins__": __builtins__,
-                "inference": inference, "embed": embed, "rerank": rerank # Inject cognitive
+                "inference": inference, "embed": embed, "rerank": rerank,
+                "put": put, "propose": propose # Inject Mutation Primitives
             }
             exec(l3_payload, l3_scope, l3_scope)
             if l3_scope.get("result"): execution_plan = l3_scope["result"]
@@ -247,6 +267,9 @@ def main():
         node = sys.argv[3] if len(sys.argv) > 3 else "local-node"
         sig = sign(sys.argv[2], node)
         print(f"Signed {sys.argv[2]} as {node}: {sig}")
+    elif cmd == "governance":
+        # seed.py governance <proposal_id>
+        print(json.dumps(_invoke_jury(sys.argv[2]), indent=2))
     elif cmd == "tally":
         # seed.py tally <proposal_id>
         print(f"Signatures for {sys.argv[2]}: {tally(sys.argv[2])}")
