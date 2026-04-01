@@ -1,3 +1,5 @@
 blob_vault/
 __pycache__/
 *.pyc
+audit.log
+manifest.json
