@@ -39,7 +39,7 @@ def test_bootstrap() -> None:
     disc_hash = manifest.get("blobs", {}).get("discovery", {}).get("logic/python")
     plan_hash = manifest.get("blobs", {}).get("planning", {}).get("logic/python")
 
-    check("manifest version 0.2.0", manifest["version"] == "0.2.0")
+    check("manifest version 1.0.0", manifest["version"] == "1.0.0")
     check("discovery blob in manifest", disc_hash is not None)
     check("planning blob in manifest", plan_hash is not None)
     check("returned discovery hash matches manifest", result["discovery"] == disc_hash)
@@ -165,3 +165,48 @@ if __name__ == "__main__":
     print(f"  {passed}/{total} passed")
     if passed < total:
         sys.exit(1)
+
+
+def test_feedback_loop() -> None:
+    section("Feedback loop — telemetry → arbitration")
+    import time
+
+    h_fast = seed.put("logic/python", "result = context['x'] * 2")
+    h_slow = seed.put("logic/python", """
+import time as _t
+_t.sleep(0.01)
+result = context['x'] * 2
+""")
+
+    # Build history: fast invoked 3x, slow invoked 1x
+    for _ in range(3):
+        linker.invoke(h_fast, {"x": 5})
+    linker.invoke(h_slow, {"x": 5})
+
+    telem = linker.read_telemetry()
+    check("telemetry-reader returns data", len(telem) >= 2)
+    check("h_fast has invocation_count=3", telem.get(h_fast, {}).get("invocation_count") == 3)
+    check("h_slow has higher avg_latency", telem.get(h_slow, {}).get("avg_latency_ms", 0) > telem.get(h_fast, {}).get("avg_latency_ms", 999))
+
+    result = linker.arbitrate([{"hash": h_fast}, {"hash": h_slow}])
+    check("arbitration selects h_fast (lower latency)", result["selected"] == h_fast)
+    check("score is numeric", isinstance(result.get("score"), (int, float)))
+
+
+def test_read_telemetry_via_blob() -> None:
+    section("Telemetry-reader blob — routes through vault")
+    h = seed.put("logic/python", "result = 'telem-blob-test'")
+    linker.invoke(h, {})
+
+    telem = linker.read_telemetry()
+    check("telemetry-reader blob invoked successfully", h in telem)
+    check("success_rate is 1.0 after clean run", telem[h]["success_rate"] == 1.0)
+
+
+def test_manifest_v1() -> None:
+    section("Manifest v1.0.0 — f_0 defined")
+    m = promote.load_manifest()
+    check("manifest version is 1.0.0", m["version"] == "1.0.0")
+    check("discovery in manifest", "discovery" in m.get("blobs", {}))
+    check("planning in manifest", "planning" in m.get("blobs", {}))
+    check("telemetry-reader in manifest", "telemetry-reader" in m.get("blobs", {}))
