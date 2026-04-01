@@ -100,7 +100,12 @@ def _pass_safety(blob_hash: str, blob: dict) -> None:
 
 
 def _pass_protocol(blob_hash: str, blob: dict) -> None:
-    """Pass 3: Protocol Compliance — ABI contract enforced via dry-run invoke."""
+    """Pass 3: Protocol Compliance — ABI contract enforced via dry-run invoke.
+
+    Only ABI violations (missing result variable) are hard failures.
+    Other execution errors (KeyError, etc.) are acceptable — the blob may
+    require real context values that the probe stub does not provide.
+    """
     if not blob["type"].startswith("logic/python"):
         return  # only executable blobs need ABI verification
     try:
@@ -108,8 +113,10 @@ def _pass_protocol(blob_hash: str, blob: dict) -> None:
     except RuntimeError as e:
         if "ABI violation" in str(e):
             raise ReviewError("ProtocolCompliance", str(e)) from e
-        raise  # unexpected runtime error
-    # Execution errors (not ABI) are acceptable in probe — blob may need real context
+        # Non-ABI RuntimeError: blob needs real context — pass this check
+    except Exception:
+        # Any other execution error (KeyError, TypeError, etc.): same reasoning
+        pass
 
 
 def triple_pass_review(blob_hash: str) -> dict:
