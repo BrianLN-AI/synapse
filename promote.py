@@ -99,6 +99,60 @@ def _pass_safety(blob_hash: str, blob: dict) -> None:
         )
 
 
+def _pass_feedback_integrity(blob_hash: str, blob: dict) -> None:
+    """Pass 4: Feedback Integrity — only for feedback/outcome blobs.
+
+    Validates structure, outcome enum, confidence range, and that the
+    referenced logic blob exists in the vault.  Non-feedback blobs are
+    skipped (no-op).
+
+    Why a dedicated pass?  feedback/outcome blobs are not executable, so
+    Pass 2 (SafetyVerification) and Pass 3 (ProtocolCompliance) skip them.
+    But they carry claims about specific logic blobs — claims that can
+    corrupt the fitness formula if malformed.  This pass enforces that:
+      - the invoked hash actually exists in the vault
+      - the outcome is a valid enum value
+      - confidence is in [0.0, 1.0]
+    A feedback blob that passes all four passes can be trusted to influence
+    FeedbackScore without corrupting it.
+    """
+    if blob.get("type") != "feedback/outcome":
+        return  # no-op for all other blob types
+
+    try:
+        record = json.loads(blob["payload"])
+    except Exception as e:
+        raise ReviewError("FeedbackIntegrity", f"payload is not valid JSON: {e}") from e
+
+    invoked = record.get("invoked", "")
+    if len(invoked) != 64 or not all(c in "0123456789abcdef" for c in invoked):
+        raise ReviewError("FeedbackIntegrity",
+                          f"'invoked' is missing or not a 64-char hex hash: {invoked!r}")
+
+    valid_outcomes = {"pass", "fail", "partial"}
+    outcome = record.get("outcome")
+    if outcome not in valid_outcomes:
+        raise ReviewError("FeedbackIntegrity",
+                          f"invalid outcome {outcome!r}; must be one of {sorted(valid_outcomes)}")
+
+    try:
+        conf_f = float(record.get("confidence", 1.0))
+    except (TypeError, ValueError) as e:
+        raise ReviewError("FeedbackIntegrity",
+                          f"confidence is not numeric: {record.get('confidence')!r}") from e
+    if not (0.0 <= conf_f <= 1.0):
+        raise ReviewError("FeedbackIntegrity",
+                          f"confidence {conf_f} out of range [0.0, 1.0]")
+
+    # The logic blob being rated must exist in the vault
+    try:
+        seed._raw_get(invoked)
+    except FileNotFoundError:
+        raise ReviewError("FeedbackIntegrity",
+                          f"invoked blob {invoked[:16]}... not found in vault — "
+                          f"feedback requires a proven invocation target")
+
+
 def _pass_protocol(blob_hash: str, blob: dict) -> None:
     """Pass 3: Protocol Compliance — ABI contract enforced via dry-run invoke.
 
@@ -121,8 +175,13 @@ def _pass_protocol(blob_hash: str, blob: dict) -> None:
 
 def triple_pass_review(blob_hash: str) -> dict:
     """
-    Run all three passes on a blob. Returns the blob on success.
+    Run all review passes on a blob. Returns the blob on success.
     Raises ReviewError on any failure.
+
+    Pass 1 — StaticAnalysis:     structural validity, syntax check for logic blobs
+    Pass 2 — SafetyVerification: no scope-escaping patterns (logic blobs only)
+    Pass 3 — ProtocolCompliance: ABI dry-run (logic/python blobs only)
+    Pass 4 — FeedbackIntegrity:  structure + referential integrity (feedback blobs only)
     """
     blob = seed._raw_get(blob_hash)
     _pass_static(blob_hash, blob)
@@ -133,6 +192,7 @@ def triple_pass_review(blob_hash: str) -> dict:
         if isinstance(e, ReviewError):
             raise
         # Non-ABI execution errors during probe are warnings, not failures
+    _pass_feedback_integrity(blob_hash, blob)  # no-op for non-feedback blobs
     return blob
 
 
@@ -236,6 +296,79 @@ def promote(
         "council_reviewer": approval.get("reviewer"),
         "manifest_hash": new_hash,
         "version": manifest["version"],
+    })
+
+    return new_hash
+
+
+# ---------------------------------------------------------------------------
+# Feedback Promotion
+# ---------------------------------------------------------------------------
+
+def promote_feedback(
+    logic_hash: str,
+    feedback_hashes: list[str],
+    council_approval_hash: str,
+    version: str = None,
+) -> str:
+    """
+    Promote feedback/outcome blobs for a specific logic blob.
+
+    Feedback promotion runs the same governance protocol as logic blob promotion:
+      1. Triple-Pass Review (includes FeedbackIntegrity pass)
+      2. Council Approval Artifact covering all feedback hashes
+      3. Update manifest["approved_feedback"][logic_hash]
+      4. Audit log entry
+
+    Only promoted feedback hashes influence FeedbackScore in the fitness formula.
+    Unpromoted feedback blobs sit in the vault but are invisible to the telemetry
+    reader — same as an unpromoted logic blob sitting in the vault but not yet
+    reachable via the manifest.
+
+    Args:
+        logic_hash:            The logic/python blob the feedback is about.
+        feedback_hashes:       feedback/outcome blob hashes to approve.
+        council_approval_hash: Council approval artifact covering all hashes.
+        version:               Optional manifest version string.
+
+    Returns the new manifest hash.
+    """
+    # Step 1 — Triple-Pass Review (FeedbackIntegrity checks invoked blob exists)
+    review_results: dict[str, str] = {}
+    for h in feedback_hashes:
+        blob = triple_pass_review(h)   # raises ReviewError on failure
+        review_results[h] = blob["type"]
+        if blob["type"] != "feedback/outcome":
+            raise ValueError(f"promote_feedback: blob {h[:16]}... is type "
+                             f"{blob['type']!r}, expected feedback/outcome")
+
+    # Step 2 — Council Approval
+    approval = _verify_council_approval(council_approval_hash, feedback_hashes)
+
+    # Step 3 — Update manifest (approved_feedback section)
+    manifest = load_manifest()
+    if version:
+        manifest["version"] = version
+    manifest["promoted_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    approved = manifest.setdefault("approved_feedback", {})
+    bucket   = approved.setdefault(logic_hash, [])
+    for h in feedback_hashes:
+        if h not in bucket:
+            bucket.append(h)
+
+    new_hash = _write_manifest(manifest)
+
+    # Step 4 — Audit Log
+    _write_audit({
+        "event":                "promote_feedback",
+        "timestamp_utc":        manifest["promoted_at"],
+        "logic_hash":           logic_hash,
+        "feedback_hashes":      list(review_results.keys()),
+        "council_approval_hash": council_approval_hash,
+        "council_reviewer":     approval.get("reviewer"),
+        "manifest_hash":        new_hash,
+        "version":              manifest["version"],
     })
 
     return new_hash

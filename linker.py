@@ -68,7 +68,11 @@ def read_telemetry() -> dict:
     Routes through the promoted telemetry-reader blob when available.
     Falls back to inline implementation — bootstrap safe.
 
-    Returns: {blob_hash: {success_rate, avg_latency_ms, avg_memory_kb, invocation_count}}
+    Passes approved_feedback from the manifest so the telemetry reader
+    only counts governed feedback blobs toward FeedbackScore (f_5).
+    Unpromoted feedback blobs in the vault are silently ignored.
+
+    Returns: {blob_hash: {success_rate, avg_latency_ms, ..., feedback_score}}
     """
     manifest = promote.load_manifest()
     telem_hash = (
@@ -76,7 +80,10 @@ def read_telemetry() -> dict:
         .get("telemetry-reader", {})
         .get("logic/python")
     )
-    ctx = {"vault_dir": str(seed.VAULT_DIR)}
+    ctx = {
+        "vault_dir":         str(seed.VAULT_DIR),
+        "approved_feedback": manifest.get("approved_feedback", {}),
+    }
     if telem_hash:
         return seed.invoke(telem_hash, ctx)
     return _telemetry_fallback(str(seed.VAULT_DIR))
@@ -146,6 +153,10 @@ def arbitrate(candidates: list[dict], auto_enrich: bool = True) -> dict | None:
                 # integrity from telemetry-reader v3 — recency-weighted success streak
                 # Default 0.5: unknown blobs are uncertain; proven blobs earn > 0.5 through use
                 "integrity":        measured.get("integrity",       c.get("integrity", 0.5)),
+                # feedback_score from telemetry-reader v5 — governed downstream outcome signal
+                # Default 1.0: no approved feedback → neutral, not penalised
+                "feedback_score":   measured.get("feedback_score",  c.get("feedback_score", 1.0)),
+                "feedback_count":   measured.get("feedback_count",  c.get("feedback_count", 0)),
             })
         candidates = enriched
 
