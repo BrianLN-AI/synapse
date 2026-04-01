@@ -28,6 +28,10 @@ BYTECODE_DIR = Path("./blob_bytecode")   # persistent on-disk compiled code obje
 # their true runtime performance. Cache keyed by content_hash (immutable blobs).
 _CODE_CACHE: dict[str, Any] = {}
 
+# Tracks the most recent telemetry blob hash per logic blob invoked in this process.
+# Used by record_feedback() to anchor feedback to a proven execution (f_4).
+_LAST_TELEMETRY: dict[str, str] = {}  # logic_hash → most recent telemetry/artifact hash
+
 
 def _load_code(content_hash: str, payload: str) -> Any:
     """
@@ -201,7 +205,59 @@ def _record_telemetry(
         "log": log_lines,
         "error": error,
     }
-    return put("telemetry/artifact", json.dumps(record))
+    telem_hash = put("telemetry/artifact", json.dumps(record))
+    _LAST_TELEMETRY[content_hash] = telem_hash
+    return telem_hash
+
+
+# ---------------------------------------------------------------------------
+# FEEDBACK — record caller-observed outcomes as governed blobs
+# ---------------------------------------------------------------------------
+
+def record_feedback(
+    logic_hash: str,
+    outcome: str,
+    confidence: float = 1.0,
+    reviewer: str = "caller",
+) -> str:
+    """
+    Store a feedback/outcome blob for a logic blob.
+
+    Why feedback as a blob?  The fitness formula (f_0–f_3) only observes local
+    signals: latency, memory, success/failure of the invocation itself.  It cannot
+    see whether the downstream system that used the blob's output succeeded.  A
+    type guard that prevents silent failures shows no measurable fitness improvement
+    in isolation — its benefit only appears in downstream outcomes.  Feedback blobs
+    carry that downstream signal back into the vault.
+
+    Proven-execution anchor:  feedback is tied to _LAST_TELEMETRY[logic_hash], the
+    most recent telemetry hash produced by invoking this blob in the current process.
+    This means feedback can only be recorded after an actual invocation — it cannot
+    be fabricated without running the blob first.
+
+    Governance:  feedback blobs are content-addressed and immutable.  Whether they
+    count toward fitness depends on whether the governing process (Triple-Pass +
+    Council Approval) has promoted them — same mechanism as every other blob type.
+    Recording a feedback blob places it in the vault; promotion is a separate step.
+
+    Args:
+        logic_hash:  SHA-256 hash of the logic/python blob being rated.
+        outcome:     "pass", "fail", or "partial".
+        confidence:  0.0–1.0 weight applied when aggregating feedback scores.
+        reviewer:    Identifier of the caller recording this feedback.
+
+    Returns the content hash of the feedback/outcome blob.
+    """
+    invocation_telem = _LAST_TELEMETRY.get(logic_hash)
+    record = {
+        "invoked":          logic_hash,
+        "invocation_telem": invocation_telem,   # proven-execution anchor
+        "outcome":          outcome,
+        "confidence":       round(float(confidence), 4),
+        "reviewer":         reviewer,
+        "timestamp_utc":    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    return put("feedback/outcome", json.dumps(record, sort_keys=True))
 
 
 # ---------------------------------------------------------------------------

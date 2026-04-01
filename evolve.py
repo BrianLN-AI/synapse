@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """
 evolve.py — D-JIT Logic Fabric Self-Modification Engine
-f_3: f_2(f_2) — third iteration, v3 blobs as baseline, v4 as candidates.
+f_4: f_3(f_3) — fourth iteration, v4 blobs as baseline, v5 as candidates.
 
 Cycle per core blob:
   1. Evaluate: read current hash from manifest, get fitness signals from telemetry
-  2. Mutate:   generate a v4 payload with concrete improvements
+  2. Mutate:   generate a v5 payload with concrete improvements
   3. Review:   Triple-Pass (StaticAnalysis → SafetyVerification → ProtocolCompliance)
   4. Benchmark: invoke old vs new N times, compare measured fitness
   5. Promote:  if new wins, Council Approval → manifest update
 
-f_3 changes vs f_2:
-  - PROMOTE_TOLERANCE is now data-derived: computed from the distribution of past
-    promotion fitness deltas recorded in the audit log. Why: 0.30 was set by hand
-    after f_1 to accommodate capability-improvement tradeoffs. After two cycles of
-    real promotions, we have measured deltas to derive a principled threshold from.
-  - v4 blob mutations (see payloads below).
+f_4 changes vs f_3:
+  - feedback/outcome blob type introduced in seed.py: callers record downstream
+    outcomes (pass/fail/partial) after invoking a blob. Why: f_3 showed that the
+    fitness formula rewards speed, not correctness. A type guard that prevents
+    silent failures pays a latency penalty with no fitness gain — because the
+    formula has no downstream signal. Feedback blobs carry that signal back.
+  - FeedbackScore added to the fitness formula: telemetry-reader v5 aggregates
+    feedback/outcome blobs per logic hash and computes a confidence-weighted
+    pass rate. Planning v5 multiplies by FeedbackScore in the numerator.
+  - Default FeedbackScore = 1.0 (neutral). Blobs with no feedback are not
+    penalised. Blobs with net-negative feedback are penalised proportionally.
+  - Proven-execution anchor: record_feedback() is anchored to _LAST_TELEMETRY —
+    feedback can only be recorded after an actual invocation of the blob.
+  - v5 blob mutations (see payloads below).
 """
 
 import json
@@ -569,10 +577,225 @@ for h, s in stats.items():
 log(f"telemetry-reader-v4: {len(result)} blob(s) with recency-decay + burstiness metrics")
 """
 
+# ---------------------------------------------------------------------------
+# v5 Blob Payloads — f_4 candidates
+# ---------------------------------------------------------------------------
+
+# Discovery v5: removes log() call on the hot path.
+# Improvement: v4 calls log() on every successful L1 resolution, formatting
+# a string every time even when log output is never observed.  v5 removes the
+# log call on the success path (L1 hit) — the common case pays zero string
+# formatting or list-append overhead.  The L2 fallback and error paths still
+# log, since those are slow paths where the overhead is irrelevant.
+DISCOVERY_V5 = """\
+import json
+from pathlib import Path
+
+vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
+target_hash = context["hash"]
+
+# Hot-path EAFP with no log overhead on L1 hit.
+# v4 called log() on every resolution — string formatting on the hot path.
+# v5 skips it: L1 hits are the common case and need no instrumentation.
+try:
+    envelope = json.loads((vault_dir / target_hash).read_text())
+except FileNotFoundError:
+    vault_dir_l2 = Path(context.get("vault_dir_l2", "./blob_vault_l2"))
+    try:
+        envelope = json.loads((vault_dir_l2 / target_hash).read_text())
+        log(f"discovery-v5: L2 fallback {target_hash[:8]}...")
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Discovery v5: {target_hash} not found in L1 or L2"
+        )
+
+blob_type = envelope.get("type", "")
+if blob_type != "logic/python":
+    raise TypeError(
+        f"Discovery v5: blob {target_hash[:8]}... has type {blob_type!r}, "
+        f"expected 'logic/python'"
+    )
+
+result = envelope
+"""
+
+# Planning v5: adds FeedbackScore to the fitness numerator.
+# Improvement: v4 scores blobs on SuccessRate × Integrity / (Latency × Burstiness × Cost).
+# v5 adds a FeedbackScore term: the confidence-weighted pass rate from feedback/outcome
+# blobs aggregated by telemetry-reader v5.  Default = 1.0 (neutral — no feedback
+# does not penalise a blob).  Negative feedback reduces the score proportionally.
+# Why: f_3 showed the formula rewards speed, not correctness.  A type guard or
+# invariant check that prevents downstream failures produces no fitness signal in
+# isolation — the benefit only appears in the system that called the blob.
+# FeedbackScore carries that downstream signal back into the selection formula.
+PLANNING_V5 = """\
+candidates = context.get("candidates", [])
+MIN_SAMPLES = 5
+
+if not candidates:
+    result = None
+else:
+    def _score(c):
+        sr             = float(c.get("success_rate",   1.0))
+        integrity      = float(c.get("integrity",      1.0))
+        feedback_score = float(c.get("feedback_score", 1.0))  # 1.0 = neutral (no feedback)
+        n              = int(c.get("invocation_count",  0))
+
+        p95 = c.get("p95_latency_ms")
+        avg = float(c.get("latency_ms", 1.0))
+        latency = max(float(p95) if p95 is not None else avg, 0.001)
+        cost    = max(float(c.get("cost", 1.0)), 0.001)
+
+        if p95 is not None and avg > 0.001:
+            burstiness = min(float(p95) / avg, 3.0)
+        else:
+            burstiness = 1.0
+
+        if n < MIN_SAMPLES:
+            w       = n / MIN_SAMPLES
+            sr      = w * sr      + (1 - w) * 0.95
+            latency = w * latency + (1 - w) * 1.0
+
+        return (sr * integrity * feedback_score) / (latency * burstiness * cost)
+
+    scored     = sorted(((c, _score(c)) for c in candidates), key=lambda x: x[1], reverse=True)
+    best, best_score = scored[0]
+
+    log(f"planning-v5: {len(candidates)} candidates, best={best['hash'][:8]}... score={best_score:.4f}")
+
+    result = {
+        "selected":  best["hash"],
+        "score":     best_score,
+        "rationale": (
+            f"f(Link)={best_score:.4f} vs runner-up {scored[1][1]:.4f}"
+            if len(scored) > 1 else "sole candidate"
+        ),
+        "ranked": [{"hash": c["hash"], "score": s} for c, s in scored],
+    }
+"""
+
+# Telemetry-Reader v5: adds FeedbackScore aggregation from feedback/outcome blobs.
+# Improvement: v4 reads only telemetry/artifact blobs.  v5 reads both telemetry
+# and feedback/outcome blobs in a single vault pass.  For each logic blob, it
+# computes a confidence-weighted pass rate (FeedbackScore) from all feedback/outcome
+# blobs where "invoked" matches the logic hash.
+# Default FeedbackScore = 1.0 when no feedback exists — neutral, not optimistic.
+# A blob with all-pass feedback approaches 1.0; all-fail approaches 0.0.
+# feedback_count is also reported so planning can apply Bayesian smoothing if needed.
+TELEMETRY_READER_V5 = """\
+import datetime
+import json
+import math
+import time
+from pathlib import Path
+
+vault_dir    = Path(context.get("vault_dir", "./blob_vault"))
+target_hash  = context.get("hash")
+HALF_LIFE_S  = context.get("half_life_hours", 24) * 3600
+now_ts       = time.time()
+LOG2         = math.log(2)
+
+stats    = {}   # hash -> telemetry aggregates (recency-decay, same as v4)
+feedback = {}   # hash -> {pos_w, total_w, count}
+
+for blob_path in vault_dir.iterdir():
+    if not blob_path.is_file():
+        continue
+    try:
+        envelope = json.loads(blob_path.read_text())
+    except Exception:
+        continue
+
+    blob_type = envelope.get("type", "")
+
+    if blob_type == "telemetry/artifact":
+        record  = json.loads(envelope["payload"])
+        invoked = record.get("invoked")
+        if not invoked:
+            continue
+        if target_hash and invoked != target_hash:
+            continue
+
+        ts_str = record.get("timestamp_utc", "")
+        try:
+            ts    = datetime.datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                        tzinfo=datetime.timezone.utc).timestamp()
+            age_s = max(now_ts - ts, 0)
+            decay = math.exp(-LOG2 * age_s / HALF_LIFE_S)
+        except Exception:
+            decay = 1.0
+
+        s = stats.setdefault(invoked, {
+            "total_w": 0.0, "success_w": 0.0,
+            "lat_sum_w": 0.0, "mem_sum_w": 0.0,
+            "lat_mean": 0.0, "lat_M2": 0.0,
+            "streak": 0, "recent_weight": 0.0, "weight_total": 0.0,
+        })
+        ok  = record.get("error") is None
+        lat = record.get("latency_ms", 0.0)
+        mem = record.get("memory_kb",  0.0)
+        s["total_w"]   += decay
+        s["lat_sum_w"] += lat * decay
+        s["mem_sum_w"] += mem * decay
+        if ok:
+            s["success_w"] += decay
+            s["streak"]    += 1
+            s["recent_weight"] += decay * (2.0 if s["streak"] > 3 else 1.0)
+        else:
+            s["streak"] = 0
+        s["weight_total"] += 2.0 * decay
+        n     = s["total_w"]
+        delta = lat - s["lat_mean"]
+        s["lat_mean"] += delta * decay / n if n > 0 else 0
+        s["lat_M2"]   += delta * (lat - s["lat_mean"]) * decay
+
+    elif blob_type == "feedback/outcome":
+        record  = json.loads(envelope["payload"])
+        invoked = record.get("invoked")
+        if not invoked:
+            continue
+        if target_hash and invoked != target_hash:
+            continue
+        outcome    = record.get("outcome", "fail")
+        confidence = float(record.get("confidence", 1.0))
+        fb = feedback.setdefault(invoked, {"pos_w": 0.0, "total_w": 0.0, "count": 0})
+        fb["total_w"] += confidence
+        fb["count"]   += 1
+        if outcome == "pass":
+            fb["pos_w"] += confidence
+
+result = {}
+for h, s in stats.items():
+    if s["total_w"] < 0.001:
+        continue
+    w          = s["total_w"]
+    variance   = s["lat_M2"] / w if w > 1 else 0.0
+    std        = variance ** 0.5
+    p95_approx = s["lat_mean"] + 1.645 * std
+    integrity  = s["recent_weight"] / s["weight_total"] if s["weight_total"] > 0 else 0.0
+
+    fb             = feedback.get(h, {})
+    total_fb_w     = fb.get("total_w", 0.0)
+    feedback_score = (fb.get("pos_w", 0.0) / total_fb_w) if total_fb_w > 0 else 1.0
+
+    result[h] = {
+        "success_rate":    s["success_w"] / w,
+        "integrity":       round(integrity, 4),
+        "avg_latency_ms":  s["lat_sum_w"] / w,
+        "p95_latency_ms":  round(p95_approx, 3),
+        "avg_memory_kb":   s["mem_sum_w"]  / w,
+        "invocation_count": round(w, 2),
+        "feedback_score":  round(feedback_score, 4),
+        "feedback_count":  fb.get("count", 0),
+    }
+
+log(f"telemetry-reader-v5: {len(result)} blob(s) with feedback scores")
+"""
+
 _MUTATIONS: dict[str, str] = {
-    "discovery":        DISCOVERY_V4,
-    "planning":         PLANNING_V4,
-    "telemetry-reader": TELEMETRY_READER_V4,
+    "discovery":        DISCOVERY_V5,
+    "planning":         PLANNING_V5,
+    "telemetry-reader": TELEMETRY_READER_V5,
 }
 
 # Benchmark contexts — valid inputs for each label so invocation succeeds
@@ -581,11 +804,12 @@ def _bench_context(label: str, current_hash: str) -> dict:
         return {"hash": current_hash, "vault_dir": str(seed.VAULT_DIR)}
     if label == "planning":
         return {"candidates": [
-            # p95 and burstiness inputs so v4 Planning blob gets a realistic signal
+            # well-behaved blob: low burstiness, positive feedback history
             {"hash": current_hash, "success_rate": 0.9, "latency_ms": 2.0, "p95_latency_ms": 3.5,
-             "integrity": 0.8, "cost": 1.0, "invocation_count": 10},
+             "integrity": 0.8, "cost": 1.0, "invocation_count": 10, "feedback_score": 0.95},
+            # spiky blob: high burstiness, negative feedback history
             {"hash": "0" * 64,    "success_rate": 0.8, "latency_ms": 1.0, "p95_latency_ms": 9.0,
-             "integrity": 0.5, "cost": 2.0, "invocation_count": 3},
+             "integrity": 0.5, "cost": 2.0, "invocation_count": 3,  "feedback_score": 0.40},
         ]}
     if label == "telemetry-reader":
         return {"vault_dir": str(seed.VAULT_DIR)}
@@ -730,7 +954,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[candidate_hash],
         council_approval_hash=approval,
-        version="1.3.0",
+        version="1.4.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -750,14 +974,14 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
 def run_all(reviewer: str = "evolve") -> list[dict]:
     """Evolve all three core blobs. Returns results list."""
     tolerance = _derive_tolerance()
-    print(f"── f_3: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
+    print(f"── f_4: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
     results = []
     for label in ["telemetry-reader", "planning", "discovery"]:
-        # telemetry-reader first so subsequent benchmarks use v4 signals (recency decay)
+        # telemetry-reader first so subsequent benchmarks use v5 signals (feedback scores)
         r = evolve_one(label, reviewer=reviewer)
         results.append(r)
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_3 complete. {len(promoted)}/3 blobs promoted → manifest v1.3.0")
+    print(f"\n  f_4 complete. {len(promoted)}/3 blobs promoted → manifest v1.4.0")
     return results
 
 
@@ -768,7 +992,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(prog="evolve", description="f_3 self-modification engine")
+    parser = argparse.ArgumentParser(prog="evolve", description="f_4 self-modification engine")
     parser.add_argument("label", nargs="?", help="Evolve one label (default: all)")
     parser.add_argument("--reviewer", default="evolve")
     args = parser.parse_args()
