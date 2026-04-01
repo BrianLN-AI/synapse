@@ -19,6 +19,12 @@ from typing import Any
 
 VAULT_DIR = Path("./blob_vault")
 
+# Compilation cache — compile each blob's payload once, reuse the code object.
+# exec() recompiles source on every call; caching eliminates that tax for hot blobs.
+# f_1 discovery: longer v2 blobs paid a per-call compilation cost that masked
+# their true runtime performance. Cache keyed by content_hash (immutable blobs).
+_CODE_CACHE: dict[str, Any] = {}
+
 
 # ---------------------------------------------------------------------------
 # BIOS Fallback — _raw_get bypasses blob-based Discovery
@@ -90,7 +96,9 @@ def invoke(content_hash: str, context: dict | None = None) -> Any:
     start_ns = time.perf_counter_ns()
 
     try:
-        exec(payload, scope)  # noqa: S102 — intentional; this IS the engine
+        if content_hash not in _CODE_CACHE:
+            _CODE_CACHE[content_hash] = compile(payload, f"<blob:{content_hash[:8]}>", "exec")
+        exec(_CODE_CACHE[content_hash], scope)  # noqa: S102 — intentional; this IS the engine
     except Exception as exc:
         _record_telemetry(
             content_hash=content_hash,

@@ -135,9 +135,11 @@ def arbitrate(candidates: list[dict], auto_enrich: bool = True) -> dict | None:
             enriched.append({
                 **c,
                 # Measured values take precedence over caller defaults
-                "success_rate": measured.get("success_rate", c.get("success_rate", 1.0)),
-                "latency_ms": measured.get("avg_latency_ms", c.get("latency_ms", 1.0)),
-                "cost": max(measured.get("avg_memory_kb", c.get("cost", 1.0)), 0.001),
+                "success_rate":     measured.get("success_rate",    c.get("success_rate", 1.0)),
+                "latency_ms":       measured.get("avg_latency_ms",  c.get("latency_ms", 1.0)),
+                "cost":             max(measured.get("avg_memory_kb", c.get("cost", 1.0)), 0.001),
+                # invocation_count passed through so Planning v2 can apply Bayesian smoothing
+                "invocation_count": measured.get("invocation_count", c.get("invocation_count", 0)),
             })
         candidates = enriched
 
