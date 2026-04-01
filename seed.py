@@ -18,11 +18,10 @@ TELEMETRY_DIR.mkdir(exist_ok=True)
 def _raw_get(h: str, is_bios: bool = False) -> str:
     """The Linker Resolver: Checks L2 Discovery, falls back to BIOS."""
     
-    # 1. BIOS Fallback: Direct filesystem lookup for system/bootstrap
-    # or if we are already in the process of resolving L2 itself.
+    # 1. BIOS Fallback: Direct filesystem lookup
     if is_bios or not os.path.exists("manifest.hash"):
         path = VAULT_DIR / h
-        if not path.exists():
+        if not path.exists() or not path.is_file():
             raise FileNotFoundError(f"Blob {h} not found in BIOS.")
         with open(path, 'r') as f:
             return f.read()
@@ -219,6 +218,45 @@ def main():
         ctx = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
         print(json.dumps(invoke(h, ctx), indent=2))
         
+    elif cmd == "mcp":
+        # Model Context Protocol (MCP) Stdio Loop
+        # Listens for JSON-RPC on stdin
+        for line in sys.stdin:
+            try:
+                request = json.loads(line)
+                method = request.get("method")
+                params = request.get("params", {})
+                req_id = request.get("id")
+
+                if method == "tools/list":
+                    # Resolve manifest to show available layers as tools
+                    with open("manifest.hash", "r") as f:
+                        root_h = f.read().strip()
+                    manifest = json.loads(_raw_get(root_h, is_bios=True))
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": {
+                            "tools": [{"name": k, "hash": v} for k, v in manifest.get("layers", {}).items()]
+                        }
+                    }
+                elif method == "tools/call":
+                    # Call a specific hash or layer name
+                    tool_hash = params.get("name") # In Synapse, tool name can be the hash
+                    tool_params = params.get("arguments", {})
+                    res = invoke(tool_hash, {"params": tool_params, "intent": "mcp_call"})
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": res
+                    }
+                else:
+                    response = {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": "Method not found"}}
+                
+                print(json.dumps(response), flush=True)
+            except Exception as e:
+                print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": str(e)}}), flush=True)
+
     elif cmd == "promote":
         manifest_path = sys.argv[2]
         with open(manifest_path, 'r') as f:
