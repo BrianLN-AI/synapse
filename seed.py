@@ -34,7 +34,7 @@ def _raw_get(h: str, is_bios: bool = False) -> str:
         return _raw_get(h, is_bios=True)
 
     try:
-        vault_tiers = ["blob_vault", "remote_vault"]
+        vault_tiers = ["blob_vault", "remote_vault", "collective_vault"]
         l2_payload = _raw_get(l2_h, is_bios=True)
         l2_scope = {"context": {"target": h, "vault_tiers": vault_tiers}, "log": lambda m: None, "result": None}
         exec(l2_payload, l2_scope, l2_scope)
