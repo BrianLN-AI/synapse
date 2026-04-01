@@ -33,19 +33,60 @@ Three metaphors guide the design:
 
 ### The Evolutionary Arc
 
+Two parallel experiment lineages evolve from the same shared base:
+
 ```
-f(unknown)   →   f_0          →   f_1               →   f_2
-  concept        seed linker       distributed mesh       agentic mesh
-  potential       4-layer ABI       polyglot runtime       self-correction
-  (tag:           (tag: f_0,        (tag: f_1,             (tag: v1.2.0)
-  undefined)      v1.0.0)           v1.1.0)
+[tag: unknown]  →  [tag: undefined]
+                         │
+              ┌──────────┴──────────────┐
+              │                         │
+   Non-council lineage           Council lineage
+   (solo agent)                  (governed, multi-agent)
+              │                         │
+   Phase 1–6 build                f(0) genesis
+              │                    COUNCIL.md
+   [tag: f_0] af6b1e0              Phases 1–3
+   [tag: f_1] 1e4dadbd             [tag: v1.0.0] c31f394  f_0
+   [tag: f_2] 77df2c3e             [tag: v1.1.0] cf6ddd4  f_1 = f_0(f_0)
+                                   [tag: v1.2.0] 9c7fb35  f_2 = f_1(f_1)
+                                   [tag: v1.3.0] ec285e3  f_3 = f_2(f_2)
+                                   [tag: v1.4.0] b39ea5f  f_4 = f_3(f_3)
 ```
 
-> ⚠️ **Synapse executes arbitrary, dynamically-loaded code at runtime.** Do not run untrusted blobs without sandboxing. See the [Safety & Threat Model](#️-safety--threat-model) section before deploying.
+> **No experiment code lives on `main` yet.** `main` is stable docs and pointers only.
+> See [docs/experiments.md](docs/experiments.md) and [docs/providence.md](docs/providence.md) for full details.
+
+## 🧬 Two Experiment Lineages
+
+Synapse is developed **agentically** — AI agents and human principals co-evolve the fabric, with the full derivation history preserved as a **providence tree** in git.
+
+### Non-Council Track (`f_*` branches + `f_*` tags)
+
+Started from `undefined` directly, without a governance layer. A solo agent built the system phase-by-phase, culminating in a "wavefunction collapse" commit that marks the first stable form.
+
+- **Branches:** `f_0`, `f_1`, `f_2`
+- **Tags (lightweight):** `unknown` → `undefined` → `f_0` → `f_1` → `f_2`
+- **Origin commit:** `af6b1e0` — *"The Wavefunction Collapse: f(undefined) → f_0"*
+
+### Council Track (`council/f_*` branches + `v1.*` tags)
+
+Started from a distinct genesis commit (`f(0)`) and immediately introduced `COUNCIL.md` — a collective intelligence governance protocol. Every release milestone is an annotated tag with a tagger identity and a release summary.
+
+- **Branches:** `council/f_0` through `council/f_4`
+- **Tags (annotated):** `v1.0.0` through `v1.4.0`
+- **Self-modification identity:** `f_n = f_{n-1}(f_{n-1})` — each cycle uses the previous version to produce the next
+
+> Note: `council/f_0` is a **branch name** (git uses `/` in names); it is not a directory.
+
+### Current Status
+
+**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
 
 ---
 
 ## 🛠 Architecture: The 4-Layer Stack
+
+> **Implementation details live on the experiment branches**, not on `main`. The description below is an overview; see `council/f_*` or `f_*` branches for the actual implementation files.
 
 Every invocation passes through four layers, each resolved as a blob at runtime:
 
@@ -74,6 +115,8 @@ To avoid infinite recursion (Discovery needs Discovery to find Discovery):
 ---
 
 ## 🚀 Quick Start
+
+> **You are on `main`.** To run the fabric, check out an experiment branch first (e.g., `git checkout council/f_4` for the latest council release, or `git checkout f_2` for the non-council track).
 
 ### Prerequisites
 
@@ -173,15 +216,30 @@ synapse/
 
 ## 🌿 Branching / Evolution Model
 
-Synapse tracks its own evolutionary lineage using **git branches as iterations** and **tags as stable collapses**.
+Synapse tracks its evolutionary lineage using **git branches as iterations** and **tags as stable collapses**.
 
-| Branch / Tag | Designation | Description |
+### Non-Council Lineage
+
+| Branch / Tag | Description |
+| :--- | :--- |
+| `main` | Stable docs and pointers only. No experiment code. |
+| tag: `unknown` | The Unknown — repo genesis commit, shared base of both lineages |
+| tag: `undefined` | The Undefined — seed potential, shared base of both lineages |
+| `f_0` (tag: `f_0`) | First stable collapse — "The Wavefunction Collapse: f(undefined) → f_0" |
+| `f_1` (tag: `f_1`) | Second iteration |
+| `f_2` (tag: `f_2`) | Third iteration |
+
+### Council Lineage
+
+| Branch / Tag | Identity | Description |
 | :--- | :--- | :--- |
-| `main` (tag: `undefined`) | **f(unknown)** | The undefined potential. A concept before implementation. |
-| `f_0` (tag: `f_0`, `v1.0.0`) | **f(0) — Seed** | First stable linker. Python only. Single vault. BIOS fallback. |
-| `f_1` (tag: `f_1`, `v1.1.0`) | **f(1) — Distributed** | Multi-vault discovery. Polyglot runtime (Python + JS). Market arbitrage in L3. |
-| `f_2` (tag: `v1.2.0`) | **f(2) — Agentic** | Self-correcting L4 (retries + backoff). Dynamic telemetry-driven plasticity in L3. MCP server. |
-| `council/f_*` | **Council branches** | Proposals/experiments feeding into the next `f_n` collapse. |
+| `council/f_0` (tag: `v1.0.0`) | `f_0` | Self-hosting + closed feedback loop |
+| `council/f_1` (tag: `v1.1.0`) | `f_1 = f_0(f_0)` | First self-modification cycle |
+| `council/f_2` (tag: `v1.2.0`) | `f_2 = f_1(f_1)` | p95 + integrity signals end-to-end |
+| `council/f_3` (tag: `v1.3.0`) | `f_3 = f_2(f_2)` | Persistent bytecode cache; dynamic tolerance |
+| `council/f_4` (tag: `v1.4.0`) | `f_4 = f_3(f_3)` | Governed feedback loop |
+
+See [docs/experiments.md](docs/experiments.md) for the full lineage histories and tag notes.
 
 ### The Collapse Ritual
 
@@ -277,20 +335,25 @@ python seed.py promote manifest.json
 
 ## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-01 19:14 UTC
+**Last updated:** 2026-04-01 19:57 UTC
 
 ### Branches
-- `copilot/initial-readme-with-automation`
+- `copilot/update-documentation-experiment-lineages`
 - `council/f_0`
 - `council/f_1`
 - `council/f_2`
 - `council/f_3`
+- `council/f_4`
+- `council/f_5`
 - `f_0`
 - `f_1`
 - `f_2`
+- `f_3`
 - `main`
 
 ### Tags
+- `v1.5.0`
+- `v1.4.0`
 - `v1.3.0`
 - `v1.2.0`
 - `v1.1.0`
