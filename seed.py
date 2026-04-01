@@ -116,24 +116,47 @@ def invoke(h: str, context: dict = None) -> dict:
     def log(msg):
         logs.append(f"[{time.time()}] {msg}")
 
-    # The Scrubbed Scope (The ABI)
-    local_scope = {
-        "context": request_envelope, # Inject the normalized envelope
-        "log": log,
-        "result": None,
-        "execution_plan": execution_plan 
-    }
-    
+    # Use Layer 4 (L4) Binding if available (The Binding Leap)
     try:
-        # Execute the blob
-        exec(payload, {"__builtins__": __builtins__}, local_scope)
-        
-        if "result" not in local_scope or local_scope["result"] is None:
-            raise ValueError(f"Blob {h} violated ABI: No 'result' assigned.")
+        if os.path.exists("manifest.hash"):
+            with open("manifest.hash", "r") as f:
+                root_h = f.read().strip()
+            manifest = json.loads(_raw_get(root_h, is_bios=True))
+            l4_h = manifest.get("layers", {}).get("l4")
+            if l4_h and h != l4_h:
+                l4_payload = _raw_get(l4_h, is_bios=True)
+                # Pass payload and plan to L4 for binding
+                l4_scope = {
+                    "context": {
+                        "target_payload": payload,
+                        "target_context": request_envelope,
+                        "execution_plan": execution_plan
+                    },
+                    "log": log, # Share log sink for L4 trace
+                    "result": None
+                }
+                exec(l4_payload, {"__builtins__": __builtins__}, l4_scope)
+                result = l4_scope.get("result")
+                status = "success"
+                error = None
+            else:
+                # Fallback to direct execution if L4 not found or we're invoking L4 itself
+                local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan}
+                exec(payload, {"__builtins__": __builtins__}, local_scope)
+                result = local_scope.get("result")
+                status = "success"
+                error = None
+        else:
+            # Fallback for no manifest (BIOS)
+            local_scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan}
+            exec(payload, {"__builtins__": __builtins__}, local_scope)
+            result = local_scope.get("result")
+            status = "success"
+            error = None
             
-        result = local_scope["result"]
-        status = "success"
-        error = None
+        if result is None:
+            raise ValueError(f"Blob {h} violated ABI: No 'result' assigned.")
+
     except Exception as e:
         status = "failure"
         error = str(e)
