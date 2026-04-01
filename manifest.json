@@ -1,9 +1,9 @@
 {
-  "version": "3.1.0",
+  "version": "3.2.0",
   "capabilities": {
     "proxy": { "stable": "7f8768f0cb9efd565e52e022b1213bc4ab715b9488874a3ff65d9b01f337f18b" },
     "librarian": { "stable": "c14bdfdfbde1e1da7b964d5ed702fc1c99970da6d446e82bfb12f2df04191888" },
-    "broker": { "stable": "5d42b251132d5130d6ac3835f8e66a8a14aa1281abcdea5de671ea59fb4f3592" },
-    "engine": { "stable": "a534a369cba432bb3b0090b9ed04eb1ac689bb6820b6099605ec9b70a89140ec" }
+    "broker": { "stable": "6b8cdaf522cc8f22248c8c9ff74cac8dd5b7d51993be05463dc97901d7922b8c" },
+    "engine": { "stable": "b70093091220512f1cd0a3314be80a52e669f29c0404617f6c8d260d88ed4a54" }
   }
 }
