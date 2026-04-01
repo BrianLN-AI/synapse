@@ -98,8 +98,8 @@ def invoke(h: str, context: dict = None) -> dict:
             l3_h = manifest.get("layers", {}).get("l3")
             if l3_h and h != l3_h:
                 l3_payload = _raw_get(l3_h, is_bios=True)
-                # Pass normalized request_envelope to L3
-                l3_scope = {"context": {"target": h, "priority": request_envelope.get("params", {}).get("priority", "normal")}, "log": lambda m: None, "result": None}
+                # Pass full request_envelope to L3 for smarter planning
+                l3_scope = {"context": {"target": h, "request": request_envelope}, "log": lambda m: None, "result": None}
                 exec(l3_payload, {"__builtins__": __builtins__}, l3_scope)
                 execution_plan = l3_scope.get("result", execution_plan)
         except Exception:
@@ -123,6 +123,7 @@ def invoke(h: str, context: dict = None) -> dict:
             if l4_h and h != l4_h:
                 l4_payload = _raw_get(l4_h, is_bios=True)
                 # Pass payload and plan to L4 for binding
+                import subprocess
                 l4_scope = {
                     "context": {
                         "target_payload": payload,
@@ -130,7 +131,9 @@ def invoke(h: str, context: dict = None) -> dict:
                         "execution_plan": execution_plan
                     },
                     "log": log, # Share log sink for L4 trace
-                    "result": None
+                    "result": None,
+                    "subprocess": subprocess, # Inject for external runtimes
+                    "json": json # Inject for serialization
                 }
                 exec(l4_payload, {"__builtins__": __builtins__}, l4_scope)
                 result = l4_scope.get("result")
