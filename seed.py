@@ -72,9 +72,26 @@ def put(payload: str, blob_type: str = "generic") -> str:
 def invoke(h: str, context: dict = None) -> dict:
     """The Engine: Executes a Blob in a scrubbed sandbox."""
     start_time = time.perf_counter()
+    context = context or {}
     
-    # 1. Broker Consultation (The Broker Leap)
-    # Check if a manifest and L3 exist to provide an execution plan
+    # 1. Interface Normalization (The Interface Leap)
+    # Check for manifest and L1 to normalize the incoming context
+    request_envelope = context
+    if os.path.exists("manifest.hash"):
+        try:
+            with open("manifest.hash", "r") as f:
+                root_h = f.read().strip()
+            manifest = json.loads(_raw_get(root_h, is_bios=True))
+            l1_h = manifest.get("layers", {}).get("l1")
+            if l1_h and h != l1_h:
+                l1_payload = _raw_get(l1_h, is_bios=True)
+                l1_scope = {"context": {"request": context}, "log": lambda m: None, "result": None}
+                exec(l1_payload, {"__builtins__": __builtins__}, l1_scope)
+                request_envelope = l1_scope.get("result", request_envelope)
+        except Exception:
+            pass
+
+    # 2. Broker Consultation (The Broker Leap)
     execution_plan = {"method": "local_exec", "sandbox": "standard"}
     if os.path.exists("manifest.hash"):
         try:
@@ -82,18 +99,16 @@ def invoke(h: str, context: dict = None) -> dict:
                 root_h = f.read().strip()
             manifest = json.loads(_raw_get(root_h, is_bios=True))
             l3_h = manifest.get("layers", {}).get("l3")
-            if l3_h:
-                # Avoid infinite recursion: don't broker the broker
-                if h != l3_h:
-                    l3_payload = _raw_get(l3_h, is_bios=True)
-                    l3_scope = {"context": {"target": h, "priority": context.get("priority", "normal")}, "log": lambda m: None, "result": None}
-                    exec(l3_payload, {"__builtins__": __builtins__}, l3_scope)
-                    execution_plan = l3_scope.get("result", execution_plan)
+            if l3_h and h != l3_h:
+                l3_payload = _raw_get(l3_h, is_bios=True)
+                # Pass normalized request_envelope to L3
+                l3_scope = {"context": {"target": h, "priority": request_envelope.get("params", {}).get("priority", "normal")}, "log": lambda m: None, "result": None}
+                exec(l3_payload, {"__builtins__": __builtins__}, l3_scope)
+                execution_plan = l3_scope.get("result", execution_plan)
         except Exception:
-            # Fallback to standard if brokering fails
             pass
 
-    # 2. Binding (The Engine)
+    # 3. Binding (The Engine)
     payload = _raw_get(h)
     
     # Telemetry Sink
@@ -103,10 +118,10 @@ def invoke(h: str, context: dict = None) -> dict:
 
     # The Scrubbed Scope (The ABI)
     local_scope = {
-        "context": context or {},
+        "context": request_envelope, # Inject the normalized envelope
         "log": log,
         "result": None,
-        "execution_plan": execution_plan # Inject the plan for context
+        "execution_plan": execution_plan 
     }
     
     try:
@@ -129,6 +144,7 @@ def invoke(h: str, context: dict = None) -> dict:
     # Telemetry Artifact
     telemetry = {
         "blob_hash": h,
+        "request_envelope": request_envelope,
         "execution_plan": execution_plan,
         "status": status,
         "latency": end_time - start_time,
