@@ -335,20 +335,25 @@ python seed.py promote manifest.json
 
 ## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-01 19:14 UTC
+**Last updated:** 2026-04-01 19:57 UTC
 
 ### Branches
-- `copilot/initial-readme-with-automation`
+- `copilot/update-documentation-experiment-lineages`
 - `council/f_0`
 - `council/f_1`
 - `council/f_2`
 - `council/f_3`
+- `council/f_4`
+- `council/f_5`
 - `f_0`
 - `f_1`
 - `f_2`
+- `f_3`
 - `main`
 
 ### Tags
+- `v1.5.0`
+- `v1.4.0`
 - `v1.3.0`
 - `v1.2.0`
 - `v1.1.0`
