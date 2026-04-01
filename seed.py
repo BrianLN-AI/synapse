@@ -82,7 +82,7 @@ def invoke(h: str, context: dict = None) -> dict:
             l1_h = manifest.get("layers", {}).get("l1")
             if l1_h and h != l1_h:
                 l1_payload = _raw_get(l1_h, is_bios=True)
-                l1_scope = {"context": {"request": context}, "log": lambda m: None, "result": None}
+                l1_scope = {"context": {"request": context, "timestamp": time.time(), "trace_id": "syn-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]}, "log": lambda m: None, "result": None}
                 exec(l1_payload, {"__builtins__": __builtins__}, l1_scope)
                 request_envelope = l1_scope.get("result", request_envelope)
         except Exception:
