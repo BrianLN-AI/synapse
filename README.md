@@ -1,0 +1,326 @@
+# Synapse: The D-JIT Logic Fabric
+
+> **f(unknown) → f(0) → f(1) → f(n)**  
+> *Each branch is a mutation. Each tag is a stable collapse of potential into form.*
+
+---
+
+## 🧠 What Is Synapse?
+
+**Synapse** is a **Distributed Just-In-Time (D-JIT) Logic Fabric** — a content-addressed, protocol-oriented compute mesh that lets agentic AI systems build, share, and invoke trusted tools and code with other agents and systems.
+
+### The "Why": A Marketplace for Trusted Logic
+
+Imagine you need an algorithm. Someone else already wrote it, verified it, and proved it works. With Synapse, you don't rewrite it — you *reference its hash*, and the fabric resolves, plans, and executes it on your behalf, wherever it lives.
+
+This is the core idea: **a marketplace for logic where any algorithm can be defined once, then implemented and verified by multiple actors in a trusted, content-addressed way.**
+
+Synapse provides:
+
+- **Guardrails and retaining walls** around generated and executed code — every blob runs in a scrubbed scope with explicit I/O contracts, not in the ambient environment.
+- **A constrained fabric to weave solutions into** — agents don't call arbitrary code; they call hashes against a fabric that enforces the ABI, routes to the right runtime, and records every action in telemetry.
+- **Infrastructure for building agents that build agents** — the system is self-referential: the layers that execute blobs are themselves blobs, resolved and improved through the same fabric.
+
+### Core Philosophy
+
+Traditional computing is obsessed with **nodes** (servers, functions, containers). Synapse shifts focus to the **gap** — the space where logic is *negotiated, brokered, and bound*.
+
+Three metaphors guide the design:
+
+- 🧬 **The Synapse** — transmission emerges from the weight of the connection, not the storage of data.
+- 🍄 **The Mycelium** — the `blob_vault` is a persistent substrate feeding the entire mesh.
+- 🌿 **The Rhizome** — a non-hierarchical system (Deleuze & Guattari) where any point connects to any other.
+
+### The Evolutionary Arc
+
+```
+f(unknown)   →   f_0          →   f_1               →   f_2
+  concept        seed linker       distributed mesh       agentic mesh
+  potential       4-layer ABI       polyglot runtime       self-correction
+  (tag:           (tag: f_0,        (tag: f_1,             (tag: v1.2.0)
+  undefined)      v1.0.0)           v1.1.0)
+```
+
+> ⚠️ **Synapse executes arbitrary, dynamically-loaded code at runtime.** Do not run untrusted blobs without sandboxing. See the [Safety & Threat Model](#️-safety--threat-model) section before deploying.
+
+---
+
+## 🛠 Architecture: The 4-Layer Stack
+
+Every invocation passes through four layers, each resolved as a blob at runtime:
+
+| Layer | Name | Role |
+| :---: | :--- | :--- |
+| **L1** | **Interface** (The Proxy) | Normalizes intent, validates inputs, stamps `trace_id`. |
+| **L2** | **Discovery** (The Librarian) | Resolves content-hashes across vault tiers (local → remote). |
+| **L3** | **Planning** (The Broker) | Market arbitrage: picks execution node by Cost × Latency × Trust fitness function. |
+| **L4** | **Binding** (The Engine) | Physically injects the blob into a scrubbed sandbox; handles retries and polyglot runtimes. |
+
+### The ABI Contract
+
+All blobs **must** follow the Scope-Exchange Protocol:
+
+- **Input:** The linker injects `context` (data dict) and `log(msg)` (telemetry sink) into the execution scope.
+- **Output:** The blob **must** assign its result to the variable `result`. Raw `return` statements are prohibited.
+- **Isolation:** The scrubbed scope prevents blobs from accessing linker internals unless explicitly injected.
+
+### The BIOS Fallback
+
+To avoid infinite recursion (Discovery needs Discovery to find Discovery):
+
+- `_raw_get(h, is_bios=True)` bypasses blob-based discovery entirely.
+- It resolves directly from the filesystem using `manifest.hash` → `manifest.json` → layer hashes.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- (Optional) Docker for safe sandboxed execution
+- (Optional) Node.js for polyglot blob execution (f_1+)
+
+### 1. Clone and Explore
+
+```bash
+git clone https://github.com/BrianLN-AI/synapse.git
+cd synapse
+git checkout f_2   # or the branch you want to explore
+```
+
+### 2. Bootstrap the System
+
+```bash
+# Promote the manifest (registers layer blobs, writes manifest.hash)
+python seed.py promote manifest.json
+```
+
+### 3. Store a Blob
+
+```bash
+# Store a Python blob that assigns result
+echo 'result = context.get("x", 0) * 2' > double.py
+HASH=$(python seed.py put double.py)
+echo "Stored blob: $HASH"
+```
+
+### 4. Invoke a Blob
+
+```bash
+python seed.py invoke "$HASH" '{"x": 21}'
+# → { "result": 42, "telemetry_hash": "...", "status": "success" }
+```
+
+### 5. Inspect Telemetry
+
+```bash
+# List telemetry artifacts
+ls blob_vault/telemetry/
+
+# Read a telemetry artifact
+python seed.py invoke <telemetry_hash>
+```
+
+### 6. Run the MCP Server (f_2+)
+
+```bash
+# Start the Model Context Protocol stdio server
+python seed.py mcp
+# Send JSON-RPC on stdin, e.g.:
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | python seed.py mcp
+```
+
+### Running Safely in Docker
+
+```bash
+docker run --rm -it \
+  --network none \
+  --cap-drop ALL \
+  --user 1000:1000 \
+  -v "$(pwd):/app" \
+  -w /app \
+  python:3.12-slim \
+  python seed.py invoke <hash> '{"key":"value"}'
+```
+
+---
+
+## 📁 Repository Structure
+
+```
+synapse/
+├── seed.py              # The Linker — CLI + MCP Server entry point
+├── manifest.json        # Layer hash registry (l1–l4)
+├── manifest.hash        # Pointer to current active manifest blob
+├── l1_interface.py      # L1 Interface blob (source, stored via PUT on promote)
+├── l2_discovery.py      # L2 Discovery blob
+├── l3_planning.py       # L3 Planning / Broker blob
+├── l4_binding.py        # L4 Binding / Engine blob
+├── blob_vault/          # Content-addressed storage (SHA-256 keyed files)
+│   └── telemetry/       # Telemetry artifacts from every invocation
+├── scripts/
+│   └── update_readme.py # Auto-updates the evolution snapshot section of this README
+├── .github/
+│   └── workflows/
+│       └── update-readme.yml  # CI: updates README on every branch/tag push
+├── f(undefined).md      # The initial concept: the undefined state
+├── f_0.md               # Specification for the f_0 iteration
+└── f_1.md               # Specification for the f_1 iteration
+```
+
+---
+
+## 🌿 Branching / Evolution Model
+
+Synapse tracks its own evolutionary lineage using **git branches as iterations** and **tags as stable collapses**.
+
+| Branch / Tag | Designation | Description |
+| :--- | :--- | :--- |
+| `main` (tag: `undefined`) | **f(unknown)** | The undefined potential. A concept before implementation. |
+| `f_0` (tag: `f_0`, `v1.0.0`) | **f(0) — Seed** | First stable linker. Python only. Single vault. BIOS fallback. |
+| `f_1` (tag: `f_1`, `v1.1.0`) | **f(1) — Distributed** | Multi-vault discovery. Polyglot runtime (Python + JS). Market arbitrage in L3. |
+| `f_2` (tag: `v1.2.0`) | **f(2) — Agentic** | Self-correcting L4 (retries + backoff). Dynamic telemetry-driven plasticity in L3. MCP server. |
+| `council/f_*` | **Council branches** | Proposals/experiments feeding into the next `f_n` collapse. |
+
+### The Collapse Ritual
+
+When a branch reaches stable fitness:
+
+1. All layer blobs (`l1`–`l4`) are finalized and stored in the vault.
+2. `manifest.json` is updated with their hashes.
+3. `python seed.py promote manifest.json` validates integrity and writes `manifest.hash`.
+4. The branch is tagged (e.g., `v1.2.0` or `f_2`) to mark the stable collapse.
+5. The next branch (`f_3`) diverges from this point.
+
+---
+
+## 🤖 Typical Workflows
+
+### Build an Agent
+
+```python
+# 1. Write the agent blob (must assign result)
+agent_code = '''
+import requests  # injected via context or __builtins__
+result = {"action": "search", "query": context["query"]}
+'''
+
+# 2. Store it
+hash = seed.put(agent_code)
+
+# 3. Invoke it
+outcome = seed.invoke(hash, {"query": "current weather in London"})
+```
+
+### Chain Blobs
+
+Blobs can invoke other blobs by embedding the hash in the context and calling `seed.invoke` (if the seed module is injected):
+
+```python
+# In a blob: chain to another blob
+sub_result = seed.invoke(context["sub_hash"], {"data": context["input"]})
+result = {"combined": sub_result["result"], "source": context["sub_hash"]}
+```
+
+### Promote a New System Manifest
+
+```bash
+# After updating l1_interface.py, l2_discovery.py, etc.:
+python seed.py put l1_interface.py   # → <l1_hash>
+python seed.py put l2_discovery.py   # → <l2_hash>
+# ... update manifest.json with new hashes ...
+python seed.py promote manifest.json
+```
+
+---
+
+## ⚠️ Safety & Threat Model
+
+**Synapse executes arbitrary, dynamically-loaded code blobs at runtime.** This is intentional by design — and it means the following risks are real:
+
+| Risk | Description |
+| :--- | :--- |
+| **Arbitrary code execution** | Any blob stored in `blob_vault/` will be `exec()`'d directly. A malicious or malformed blob can do anything the process user can do. |
+| **Credential exposure** | Blobs execute inside the same Python process. Any secrets in environment variables or mounted files are accessible. |
+| **Network egress** | Blobs can open sockets, call external APIs, or exfiltrate data unless network is restricted. |
+| **Privilege escalation** | If run as root or with elevated permissions, a blob can escape to the host OS. |
+| **Supply-chain blobs** | Remote vault tiers could serve untrusted blobs if not properly authenticated. |
+
+### Hardening Checklist
+
+- **Do not run with `--yolo` or blindly invoke untrusted hashes.** Always verify blob provenance.
+- **Run inside Docker** (or a locked-down VM). Example minimal invocation:
+  ```bash
+  docker run --rm -it \
+    --network none \
+    --read-only \
+    --tmpfs /tmp \
+    --cap-drop ALL \
+    -v "$(pwd)/blob_vault:/app/blob_vault:ro" \
+    python:3.12-slim python seed.py invoke <hash>
+  ```
+- **Use least privilege.** Run as a non-root user (`--user 1000:1000`).
+- **Restrict network egress** using Docker `--network none` or firewall rules (`iptables`, `nftables`).
+- **Mount blob_vault read-only** when not actively writing new blobs.
+- **Never pass secrets** (API keys, tokens, passwords) in the `context` dict unless the blob is fully audited.
+- **Enable audit logging.** Telemetry blobs are written to `blob_vault/telemetry/` — review them.
+- **Validate blob hashes** before executing: the SHA-256 hash *is* the content address. A mismatch means tampering.
+- **Isolate filesystem.** Use a `tmpfs` or ephemeral container so blobs cannot persist state between runs unless explicitly designed to.
+
+> **TL;DR:** Treat every blob like a shell script you downloaded from the internet. Would you run it as root? No. Neither should Synapse.
+
+---
+
+<!-- AUTO-GENERATED:START -->
+<!-- This section is automatically updated by scripts/update_readme.py on every push. Do not edit manually. -->
+
+## 📊 Evolution Snapshots
+
+**Last updated:** 2026-04-01 19:13 UTC
+
+### Branches
+- `copilot/initial-readme-with-automation`
+- `council/f_0`
+- `council/f_1`
+- `council/f_2`
+- `council/f_3`
+- `f_0`
+- `f_1`
+- `f_2`
+- `main`
+
+### Tags
+- `v1.3.0`
+- `v1.2.0`
+- `v1.1.0`
+- `v1.0.0`
+- `unknown`
+- `undefined`
+- `f_2`
+- `f_1`
+- `f_0`
+
+<!-- AUTO-GENERATED:END -->
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository and create a branch named `council/f_<n>_<feature>`.
+2. Follow the **ABI Contract**: every blob must assign to `result` and use the `log()` sink.
+3. Run `python seed.py promote manifest.json` before committing a new layer configuration.
+4. Do not commit `blob_vault/` contents to version control (add to `.gitignore`).
+5. Open a PR against the appropriate `f_<n>` branch (not `main`).
+
+---
+
+## 📄 License
+
+No explicit license file has been found in this repository.  
+All rights are assumed to be reserved by the author(s) until a license is added.  
+**Do not use, distribute, or modify this code in production without explicit permission.**
+
+---
+
+*"Logic exists in the Intermezzo — the space between movement."*

@@ -1,0 +1,49 @@
+name: Update README Evolution Snapshots
+
+# Trigger on every branch push and every tag push.
+# The commit made by this workflow uses [skip ci] so it doesn't trigger itself.
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    name: Regenerate README auto-generated block
+    runs-on: ubuntu-latest
+
+    # Skip commits that were already made by this workflow to avoid infinite loops.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+    steps:
+      - name: Checkout repository (full history for branch/tag listing)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run README update script
+        run: python scripts/update_readme.py
+
+      - name: Commit updated README (if changed)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet README.md; then
+            echo "No changes to README.md — nothing to commit."
+          else
+            git add README.md
+            git commit -m "docs: update README evolution snapshots [skip ci]"
+            git push
+          fi
