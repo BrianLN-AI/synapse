@@ -5,52 +5,21 @@
 
 ---
 
-## ⚠️ Safety Warning — Read Before Running
-
-**Synapse executes arbitrary, dynamically-loaded code blobs at runtime.**
-
-This is intentional by design — and it means the following risks are real:
-
-| Risk | Description |
-| :--- | :--- |
-| **Arbitrary code execution** | Any blob stored in `blob_vault/` will be `exec()`'d directly. A malicious or malformed blob can do anything the process user can do. |
-| **Credential exposure** | Blobs execute inside the same Python process. Any secrets in environment variables or mounted files are accessible. |
-| **Network egress** | Blobs can open sockets, call external APIs, or exfiltrate data unless network is restricted. |
-| **Privilege escalation** | If run as root or with elevated permissions, a blob can escape to the host OS. |
-| **Supply-chain blobs** | Remote vault tiers could serve untrusted blobs if not properly authenticated. |
-
-### Hardening Checklist
-
-- **Do not run with `--yolo` or blindly invoke untrusted hashes.** Always verify blob provenance.
-- **Run inside Docker** (or a locked-down VM). Example minimal invocation:
-  ```bash
-  docker run --rm -it \
-    --network none \
-    --read-only \
-    --tmpfs /tmp \
-    --cap-drop ALL \
-    -v "$(pwd)/blob_vault:/app/blob_vault:ro" \
-    python:3.12-slim python seed.py invoke <hash>
-  ```
-- **Use least privilege.** Run as a non-root user (`--user 1000:1000`).
-- **Restrict network egress** using Docker `--network none` or firewall rules (`iptables`, `nftables`).
-- **Mount blob_vault read-only** when not actively writing new blobs.
-- **Never pass secrets** (API keys, tokens, passwords) in the `context` dict unless the blob is fully audited.
-- **Enable audit logging.** Telemetry blobs are written to `blob_vault/telemetry/` — review them.
-- **Validate blob hashes** before executing: the SHA-256 hash *is* the content address. A mismatch means tampering.
-- **Isolate filesystem.** Use a `tmpfs` or ephemeral container so blobs cannot persist state between runs unless explicitly designed to.
-
-> **TL;DR:** Treat every blob like a shell script you downloaded from the internet. Would you run it as root? No. Neither should Synapse.
-
----
-
 ## 🧠 What Is Synapse?
 
-**Synapse** is a **Distributed Just-In-Time (D-JIT) Logic Fabric** — a content-addressed, protocol-oriented compute mesh where:
+**Synapse** is a **Distributed Just-In-Time (D-JIT) Logic Fabric** — a content-addressed, protocol-oriented compute mesh that lets agentic AI systems build, share, and invoke trusted tools and code with other agents and systems.
 
-- **Code, data, and inference are immutable Blobs**, each identified by its SHA-256 hash.
-- **Logic is late-bound**: it doesn't exist until the moment of invocation. It is a *wavefunction of potential* that collapses into a result only when called.
-- **Intelligence lives in the connections**, not the nodes — in the synaptic cleft between intent and execution.
+### The "Why": A Marketplace for Trusted Logic
+
+Imagine you need an algorithm. Someone else already wrote it, verified it, and proved it works. With Synapse, you don't rewrite it — you *reference its hash*, and the fabric resolves, plans, and executes it on your behalf, wherever it lives.
+
+This is the core idea: **a marketplace for logic where any algorithm can be defined once, then implemented and verified by multiple actors in a trusted, content-addressed way.**
+
+Synapse provides:
+
+- **Guardrails and retaining walls** around generated and executed code — every blob runs in a scrubbed scope with explicit I/O contracts, not in the ambient environment.
+- **A constrained fabric to weave solutions into** — agents don't call arbitrary code; they call hashes against a fabric that enforces the ABI, routes to the right runtime, and records every action in telemetry.
+- **Infrastructure for building agents that build agents** — the system is self-referential: the layers that execute blobs are themselves blobs, resolved and improved through the same fabric.
 
 ### Core Philosophy
 
@@ -71,6 +40,8 @@ f(unknown)   →   f_0          →   f_1               →   f_2
   (tag:           (tag: f_0,        (tag: f_1,             (tag: v1.2.0)
   undefined)      v1.0.0)           v1.1.0)
 ```
+
+> ⚠️ **Synapse executes arbitrary, dynamically-loaded code at runtime.** Do not run untrusted blobs without sandboxing. See the [Safety & Threat Model](#️-safety--threat-model) section before deploying.
 
 ---
 
@@ -261,6 +232,43 @@ python seed.py put l2_discovery.py   # → <l2_hash>
 # ... update manifest.json with new hashes ...
 python seed.py promote manifest.json
 ```
+
+---
+
+## ⚠️ Safety & Threat Model
+
+**Synapse executes arbitrary, dynamically-loaded code blobs at runtime.** This is intentional by design — and it means the following risks are real:
+
+| Risk | Description |
+| :--- | :--- |
+| **Arbitrary code execution** | Any blob stored in `blob_vault/` will be `exec()`'d directly. A malicious or malformed blob can do anything the process user can do. |
+| **Credential exposure** | Blobs execute inside the same Python process. Any secrets in environment variables or mounted files are accessible. |
+| **Network egress** | Blobs can open sockets, call external APIs, or exfiltrate data unless network is restricted. |
+| **Privilege escalation** | If run as root or with elevated permissions, a blob can escape to the host OS. |
+| **Supply-chain blobs** | Remote vault tiers could serve untrusted blobs if not properly authenticated. |
+
+### Hardening Checklist
+
+- **Do not run with `--yolo` or blindly invoke untrusted hashes.** Always verify blob provenance.
+- **Run inside Docker** (or a locked-down VM). Example minimal invocation:
+  ```bash
+  docker run --rm -it \
+    --network none \
+    --read-only \
+    --tmpfs /tmp \
+    --cap-drop ALL \
+    -v "$(pwd)/blob_vault:/app/blob_vault:ro" \
+    python:3.12-slim python seed.py invoke <hash>
+  ```
+- **Use least privilege.** Run as a non-root user (`--user 1000:1000`).
+- **Restrict network egress** using Docker `--network none` or firewall rules (`iptables`, `nftables`).
+- **Mount blob_vault read-only** when not actively writing new blobs.
+- **Never pass secrets** (API keys, tokens, passwords) in the `context` dict unless the blob is fully audited.
+- **Enable audit logging.** Telemetry blobs are written to `blob_vault/telemetry/` — review them.
+- **Validate blob hashes** before executing: the SHA-256 hash *is* the content address. A mismatch means tampering.
+- **Isolate filesystem.** Use a `tmpfs` or ephemeral container so blobs cannot persist state between runs unless explicitly designed to.
+
+> **TL;DR:** Treat every blob like a shell script you downloaded from the internet. Would you run it as root? No. Neither should Synapse.
 
 ---
 
