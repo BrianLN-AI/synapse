@@ -142,16 +142,20 @@ class Linker:
         """Forks the current fabric into a separate temporal branch (Sub-Fabric)."""
         branch_root = self.adapter.root_dir / "branches" / name
         branch_root.mkdir(parents=True, exist_ok=True)
-        
-        # 1. Clone Registry
         root_h = self.adapter.get_manifest_hash()
-        if root_h:
-            (branch_root / "manifest.hash").write_text(root_h)
-            
-        # 2. Symlink/Link the Substrate (Vault)
-        # In a real f_7, we'd use symlinks to share blobs without copying
-        # For the seed, we'll point the sub-adapter to the parent vault
+        if root_h: (branch_root / "manifest.hash").write_text(root_h)
         return str(branch_root)
+
+    def rollback(self, h: str):
+        """Reverts the system root to a previous manifest hash."""
+        # 1. Integrity Check (Does it exist?)
+        try:
+            self.adapter.read(h)
+            # 2. Update the pointer
+            self.adapter.update_manifest_hash(h)
+            return f"Rollback success: Root is now {h}"
+        except Exception as e:
+            return f"Rollback failed: {str(e)}"
 
     def resolve_capability(self, name: str, version: str = "stable") -> str:
         root_h = self.adapter.get_manifest_hash()
@@ -185,7 +189,7 @@ class Linker:
             "inference": self.inference, "embed": self.embed, "rerank": self.rerank,
             "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities,
             "invoke_capability": self.invoke_capability, "put": self.adapter.write, "propose": self.propose,
-            "branch": self.branch
+            "branch": self.branch, "rollback": self.rollback
         }
 
         # 1. Proxy
