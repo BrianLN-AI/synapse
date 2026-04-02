@@ -1,11 +1,11 @@
 {
-  "version": "7.3.0",
+  "version": "8.1.0",
   "capabilities": {
     "proxy": { "stable": "7f8768f0cb9efd565e52e022b1213bc4ab715b9488874a3ff65d9b01f337f18b" },
     "librarian": { "stable": "c7f3d944fabe3a3adacd321e118efe0109c63e4afd3bd06d8e31030462be1851" },
     "broker": { "stable": "ffb2a2f4c39f6338dc9b8e2e6397b55c80c5958c4c943b6525ee66b8c3c1ab83" },
-    "engine": { "stable": "517f02901e8646d7d6a054119a57e008cd22a6841e267c6c6b172a3b26225b43" },
+    "engine": { "stable": "402a2dc71b63143e26088c969d6c0afeb8f5dc0b0c6062df51189cf60060d32c" },
     "jury": { "stable": "fa512194d3a4cc765dd79c88b8df570efb449e897cdc6de6fde4a8d9c221b88d" },
-    "linker": { "stable": "3f44eba1c39822b3ae5067ca527ffd0b816dacd1b747829957894ad0016cfa92" }
+    "linker": { "stable": "750a4df3344398f65ce8c101b49724ef63bae5c3bd15c9c021fd6f54c50923fd" }
   }
 }

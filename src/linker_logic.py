@@ -148,14 +148,34 @@ class Linker:
 
     def rollback(self, h: str):
         """Reverts the system root to a previous manifest hash."""
-        # 1. Integrity Check (Does it exist?)
         try:
             self.adapter.read(h)
-            # 2. Update the pointer
             self.adapter.update_manifest_hash(h)
             return f"Rollback success: Root is now {h}"
         except Exception as e:
             return f"Rollback failed: {str(e)}"
+
+    def diff(self, h1: str, h2: str) -> dict:
+        """Compares two manifest hashes and returns the semantic difference."""
+        try:
+            m1 = json.loads(self.adapter.read(h1)).get("capabilities", {})
+            m2 = json.loads(self.adapter.read(h2)).get("capabilities", {})
+            
+            diff_report = {"added": {}, "removed": {}, "updated": {}, "identical": []}
+            
+            all_caps = set(m1.keys()) | set(m2.keys())
+            for cap in all_caps:
+                if cap not in m1:
+                    diff_report["added"][cap] = m2[cap]
+                elif cap not in m2:
+                    diff_report["removed"][cap] = m1[cap]
+                elif m1[cap] != m2[cap]:
+                    diff_report["updated"][cap] = {"old": m1[cap], "new": m2[cap]}
+                else:
+                    diff_report["identical"].append(cap)
+            return diff_report
+        except Exception as e:
+            return {"error": str(e)}
 
     def resolve_capability(self, name: str, version: str = "stable") -> str:
         root_h = self.adapter.get_manifest_hash()
@@ -189,7 +209,7 @@ class Linker:
             "inference": self.inference, "embed": self.embed, "rerank": self.rerank,
             "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities,
             "invoke_capability": self.invoke_capability, "put": self.adapter.write, "propose": self.propose,
-            "branch": self.branch, "rollback": self.rollback
+            "branch": self.branch, "rollback": self.rollback, "diff": self.diff
         }
 
         # 1. Proxy
@@ -271,6 +291,9 @@ def main():
         scope = {"context": {"proposal_id": sys.argv[2]}, "log": lambda m: None, "result": None, "inference": linker.inference, "sign": linker.sign, "tally": linker.tally, "_raw_get": adapter.read, "json": json, "os": os, "__builtins__": __builtins__}
         exec(adapter.read(jury_h), scope, scope); print(json.dumps(scope.get("result"), indent=2))
     elif cmd == "tally": print(f"Signatures for {sys.argv[2]}: {linker.tally(sys.argv[2])}")
+    elif cmd == "diff":
+        # seed.py diff <h1> <h2>
+        print(json.dumps(linker.diff(sys.argv[2], sys.argv[3]), indent=2))
     elif cmd == "invoke": print(json.dumps(linker.invoke(sys.argv[2], json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}), indent=2))
     elif cmd == "mcp":
         for line in sys.stdin:

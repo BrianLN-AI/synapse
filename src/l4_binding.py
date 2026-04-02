@@ -42,7 +42,7 @@ else:
                         '__builtins__': sandbox_builtins, 'inference': inference, 'embed': embed, 'rerank': rerank,
                         'get_capability': get_capability, 'list_capabilities': list_capabilities, 'invoke_capability': invoke_capability,
                         'VaultAdapter': globals().get('VaultAdapter'), 'Linker': globals().get('Linker'),
-                        'branch': globals().get('branch'), 'rollback': globals().get('rollback') # f_7 Temporal
+                        'branch': globals().get('branch'), 'rollback': globals().get('rollback'), 'diff': globals().get('diff') # f_7 Temporal
                     }
                     exec(target_payload, target_scope, target_scope)
                     result = target_scope.get('result')
