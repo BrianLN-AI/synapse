@@ -349,7 +349,7 @@ python seed.py promote manifest.json
 
 ## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-02 18:06 UTC
+**Last updated:** 2026-04-02 19:47 UTC
 
 ### Branches
 - `copilot/update-documentation-experiment-lineages`
@@ -375,6 +375,8 @@ python seed.py promote manifest.json
 - `f_4`
 - `f_5`
 - `f_6`
+- `f_7`
+- `f_8`
 - `main`
 
 ### Tags
@@ -393,6 +395,8 @@ python seed.py promote manifest.json
 - `v1.0.0`
 - `unknown`
 - `undefined`
+- `f_7`
+- `f_6`
 - `f_4`
 - `f_3`
 - `f_2`
