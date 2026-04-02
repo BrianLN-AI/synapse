@@ -1,4 +1,4 @@
-# ADR-015: GOKR Convergence Protocol
+# ADR-016: GOKR Convergence Protocol
 
 **Date:** 2026-04-02
 **Status:** Proposed
