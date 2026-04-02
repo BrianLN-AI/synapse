@@ -349,7 +349,7 @@ python seed.py promote manifest.json
 
 ## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-02 13:13 UTC
+**Last updated:** 2026-04-02 13:14 UTC
 
 ### Branches
 - `copilot/update-documentation-experiment-lineages`
@@ -367,7 +367,6 @@ python seed.py promote manifest.json
 - `council/f_9`
 - `docs/adr-bare-decisions`
 - `docs/adr-council-decisions`
-- `docs/adr-v2`
 - `f_0`
 - `f_1`
 - `f_2`
