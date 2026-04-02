@@ -126,13 +126,30 @@ class Linker:
         with open(self.adapter.proposals_dir / h, 'w') as f: json.dump(mutation, f)
         return h
 
-    def sign(self, prop_id: str, node_id: str = "local-node") -> str:
-        data = {"proposal_id": prop_id, "node_id": node_id, "timestamp": time.time()}
+    def sign(self, prop_id: str, node_id: str = "local-node", conditions: dict = None) -> str:
+        """Issues a conditional cryptographic signature (Attestation)."""
+        data = {"target_id": prop_id, "node_id": node_id, "timestamp": time.time(), "conditions": conditions or {}}
         h = hashlib.sha256(json.dumps(data).encode()).hexdigest()
         d = self.adapter.signatures_dir / prop_id
         d.mkdir(parents=True, exist_ok=True)
         with open(d / f"{node_id}.sig", 'w') as f: json.dump(data, f)
         return h
+
+    def is_authorized(self, h: str, context: dict) -> bool:
+        """Verifies if a hash has valid attestations for the current context."""
+        d = self.adapter.signatures_dir / h
+        if not d.exists(): return False
+        current_trace = context.get('metadata', {}).get('trace_id')
+        valid_sigs = 0
+        for sig_file in d.glob("*.sig"):
+            try:
+                sig = json.loads(sig_file.read_text())
+                cond = sig.get('conditions', {})
+                if 'trace_id' in cond and cond['trace_id'] != current_trace: continue
+                if 'expires_at' in cond and time.time() > cond['expires_at']: continue
+                valid_sigs += 1
+            except: continue
+        return valid_sigs > 0
 
     def tally(self, prop_id: str) -> int:
         d = self.adapter.signatures_dir / prop_id
@@ -183,13 +200,25 @@ class Linker:
         logs = []
         def log(msg): logs.append(f"[{time.time()}] {msg}")
 
+        # --- CORE PRIMITIVES (Safe for all) ---
         primitives = {
             "inference": self.inference, "embed": self.embed, "rerank": self.rerank,
             "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities,
             "invoke_capability": self.invoke_capability, "read_blob": self.adapter.read,
-            "put": self.adapter.write, "propose": self.propose,
-            "branch": self.branch, "rollback": self.rollback
+            "json": json
         }
+
+        # --- ADMIN PRIMITIVES (Attestation Required) ---
+        if self.is_authorized(h, context):
+            log(f"Linker: ATTESTATION VERIFIED for {h}. Injecting Admin Primitives.")
+            primitives.update({
+                "put": self.adapter.write, 
+                "propose": self.propose,
+                "branch": self.branch, 
+                "rollback": self.rollback,
+                "sign": self.sign,
+                "tally": self.tally
+            })
 
         # 1. Proxy
         proxy_h = self.resolve_capability("proxy")
@@ -263,7 +292,10 @@ def main():
         idx = adapter.index_get()
         idx[sys.argv[2]] = {"hash": sys.argv[2], "description": sys.argv[3], "vector": linker.embed(sys.argv[3])}
         adapter.index_put(idx); print(f"Indexed: {sys.argv[2]}")
-    elif cmd == "sign": print(f"Signed {sys.argv[2]}: {linker.sign(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'local-node')}")
+    elif cmd == "sign":
+        node = sys.argv[3] if len(sys.argv) > 3 else "local-node"
+        cond = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
+        print(f"Signed {sys.argv[2]}: {linker.sign(sys.argv[2], node, cond)}")
     elif cmd == "governance":
         jury_h = linker.resolve_capability("jury")
         if not jury_h: print("Error: No Jury capability"); sys.exit(1)

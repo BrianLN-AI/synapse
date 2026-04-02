@@ -1,12 +1,12 @@
 {
-  "version": "8.3.2",
+  "version": "8.4.1",
   "capabilities": {
     "proxy": { "stable": "7f8768f0cb9efd565e52e022b1213bc4ab715b9488874a3ff65d9b01f337f18b" },
     "librarian": { "stable": "c7f3d944fabe3a3adacd321e118efe0109c63e4afd3bd06d8e31030462be1851" },
     "broker": { "stable": "ffb2a2f4c39f6338dc9b8e2e6397b55c80c5958c4c943b6525ee66b8c3c1ab83" },
-    "engine": { "stable": "f8c8b28a164ab7516e1fafdb8ba31fb9627d8d058425eda8a0e32694af85257a" },
+    "engine": { "stable": "06284dc6eb3b39444d19e0c4145256f1dc246c306126986e4fea87b8bd3b1f2b" },
     "jury": { "stable": "fa512194d3a4cc765dd79c88b8df570efb449e897cdc6de6fde4a8d9c221b88d" },
-    "linker": { "stable": "9711d63e23d7e604fbd881af319f294d40e4d51cadd7f81b1c2d68cdcfee93c1" },
+    "linker": { "stable": "16172c1768c17f493ae5515a0a1faa077891cd69c25f5a171fe52a6cf30b3625" },
     "differ": { "stable": "c4f2a5589d19ce7512ed8d99d8e10557393f6b675b760731a81a3397f6429b75" },
     "merger": { "stable": "c258372e83435900f51e5090f828599b38ec52d0d5b2edb283bd0176a0966478" }
   }

@@ -36,19 +36,24 @@ else:
                 result = f"Collective success on {node}."
             else:
                 if runtime == 'python':
-                    # Inject state AND all primitives into target scope
+                    # Dynamic Injection: L4 passes EVERYTHING from its globals 
+                    # that looks like a primitive down to the target.
                     target_scope = {
                         'context': target_context, 'log': log, 'result': None, 
                         'execution_plan': target_plan, 'state': state,
-                        '__builtins__': sandbox_builtins, 'inference': inference, 'embed': embed, 'rerank': rerank,
-                        'get_capability': get_capability, 'list_capabilities': list_capabilities, 'invoke_capability': invoke_capability,
-                        'read_blob': globals().get('read_blob'),
-                        'json': globals().get('json'),
-                        'put': globals().get('put'),         # f_8 Admin
-                        'propose': globals().get('propose'), # f_8 Admin
-                        'VaultAdapter': globals().get('VaultAdapter'), 'Linker': globals().get('Linker'),
-                        'branch': globals().get('branch'), 'rollback': globals().get('rollback')
+                        '__builtins__': sandbox_builtins
                     }
+                    # Primitives were injected into L4 globals by Linker
+                    known_primitives = [
+                        'inference', 'embed', 'rerank', 'get_capability', 
+                        'list_capabilities', 'invoke_capability', 'read_blob', 
+                        'json', 'put', 'propose', 'branch', 'rollback', 'sign', 'tally',
+                        'VaultAdapter', 'Linker'
+                    ]
+                    for p in known_primitives:
+                        val = globals().get(p)
+                        if val is not None: target_scope[p] = val
+                        
                     exec(target_payload, target_scope, target_scope)
                     result = target_scope.get('result')
                     state = target_scope.get('state', state)
