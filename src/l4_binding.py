@@ -43,7 +43,9 @@ else:
                         '__builtins__': sandbox_builtins, 'inference': inference, 'embed': embed, 'rerank': rerank,
                         'get_capability': get_capability, 'list_capabilities': list_capabilities, 'invoke_capability': invoke_capability,
                         'read_blob': globals().get('read_blob'),
-                        'json': globals().get('json'), # f_8 Pluggable
+                        'json': globals().get('json'),
+                        'put': globals().get('put'),         # f_8 Admin
+                        'propose': globals().get('propose'), # f_8 Admin
                         'VaultAdapter': globals().get('VaultAdapter'), 'Linker': globals().get('Linker'),
                         'branch': globals().get('branch'), 'rollback': globals().get('rollback')
                     }
