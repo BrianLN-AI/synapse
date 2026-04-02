@@ -27,30 +27,17 @@ try:
                     failed_hash = data.get('blob_hash')
                     error = data.get('error')
                     log(f"L3: [REPLAY OPPORTUNITY] Found failure in blob: {failed_hash}")
-                    
-                    # 1. Generate a Synthetic Lesson via Inference
                     lesson_prompt = f"Analyze this failure and generate a fix: Blob {failed_hash} failed with error: {error}. Context: {data.get('request_envelope')}"
                     lesson_fix = inference(lesson_prompt)
-                    
-                    # 2. Store the Lesson Blob
-                    lesson_code = f"""
-log('Executing Synthetic Lesson for failed blob: {failed_hash}')
-log('Lesson learned: {lesson_fix}')
-result = 'Lesson applied successfully'
-"""
+                    lesson_code = f"log('Executing Synthetic Lesson for failed blob: {failed_hash}')\nlog('Lesson learned: {lesson_fix}')\nresult = 'Lesson applied successfully'"
                     lesson_h = put(lesson_code, 'synthetic_lesson')
-                    log(f"L3: Synthetic Lesson generated: {lesson_h}")
-                    
-                    # 3. Propose to Registry as a Patch
                     with open('manifest.hash', 'r') as f: root_h = f.read().strip()
                     with open(f'blob_vault/{root_h}', 'r') as f: manifest = json.load(f)
-                    
                     lesson_name = "lesson_" + hashlib.md5(failed_hash.encode()).hexdigest()[:8]
                     if lesson_name not in manifest['capabilities']:
                         manifest['capabilities'][lesson_name] = {'stable': lesson_h}
-                        prop_id = propose(manifest)
-                        log(f"L3: [PROPOSED] Lesson capability: {lesson_name}. Proposal ID: {prop_id}")
-                    break # Only one replay per cycle for stability
+                        propose(manifest)
+                    break 
         except: continue
 except Exception as e:
     log(f"L3: Replay Error: {str(e)}")
@@ -69,7 +56,6 @@ try:
                     prompt = artifact.get('prompt', '')
                     patterns[prompt] = patterns.get(prompt, 0) + 1
         except: continue
-    
     for prompt, count in patterns.items():
         if count >= 3:
             distilled_code = f"log('Executing Distilled Logic for prompt: {prompt}')\nresult = 'Distilled result for: {prompt}'"
@@ -96,11 +82,15 @@ else:
     if priority == 'high': node_name = min(nodes, key=lambda n: nodes[n]['latency'])
     else: node_name = min(nodes, key=lambda n: nodes[n]['cost'])
     stats = nodes[node_name]
-    log(f"L3: Selected Node: {node_name} (Type: {stats['type']}, optimized for {priority} priority)")
+    
+    # FIXED: Prioritize 'runtime' from params if present
+    runtime = params.get('runtime', stats['runtime'])
+    
+    log(f"L3: Selected Node: {node_name} (Type: {stats['type']}, Runtime: {runtime})")
     result = {
         'method': 'local_exec' if stats['type'] == 'internal' else 'federated_invoke',
         'node': node_name,
-        'runtime': stats['runtime'],
+        'runtime': runtime,
         'sandbox': 'high_isolation' if priority == 'high' else 'standard',
         'cost_estimate': stats['cost'] * 0.0001,
         'retry_policy': {'max_attempts': 3 if priority == 'high' else 1, 'backoff': 0.1}

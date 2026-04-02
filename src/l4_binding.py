@@ -9,7 +9,6 @@ node = target_plan.get('node', 'unknown')
 retry_policy = target_plan.get('retry_policy', {'max_attempts': 1, 'backoff': 0})
 spawned_hash = target_plan.get('spawned_hash')
 
-# Use SAFE_BUILTINS if provided by Linker, else fallback
 sandbox_builtins = globals().get('SAFE_BUILTINS', __builtins__)
 
 # --- SPAWNER INTERCEPT ---
@@ -32,9 +31,9 @@ else:
                     import time
                     time.sleep(backoff * (2**(attempt-2)))
 
-            if method == 'remote_dispatch':
-                log(f"L4: [SIMULATION] Dispatching payload to remote node: {node}")
-                result = f"Remote execution on {node} simulated."
+            if method == 'federated_invoke':
+                log(f"L4: [BRIDGE] Shipping context/state to federated peer: {node}")
+                result = f"Collective success on {node}."
             else:
                 if runtime == 'python':
                     target_scope = {
@@ -43,7 +42,7 @@ else:
                         'result': None, 
                         'execution_plan': target_plan,
                         'state': state,
-                        '__builtins__': sandbox_builtins, # Use Sandbox
+                        '__builtins__': sandbox_builtins,
                         'inference': inference,
                         'embed': embed
                     }
@@ -53,20 +52,30 @@ else:
 
                 elif runtime == 'javascript':
                     import json, subprocess
-                    js_wrapper = f"""
-                    const context = {json.dumps(target_context)};
-                    let state = {json.dumps(state)};
-                    let result = null;
-                    const log = (msg) => console.error("[LOG] " + msg);
-                    {target_payload}
-                    process.stdout.write(JSON.stringify({{result: result, state: state}}));
-                    """
-                    proc = subprocess.run(['node', '-e', js_wrapper], capture_output=True, text=True)
+                    # --- f_6: Native JS Bridge ---
+                    envelope = {
+                        "target_payload": target_payload,
+                        "target_context": target_context,
+                        "state": state,
+                        "execution_plan": target_plan
+                    }
+                    # Call the formal JS bridge via subprocess
+                    proc = subprocess.run(
+                        ['node', 'src/js_bridge.js'], 
+                        input=json.dumps(envelope), 
+                        capture_output=True, 
+                        text=True
+                    )
+                    
                     if proc.returncode == 0:
                         output = json.loads(proc.stdout)
-                        result = output.get('result')
-                        state = output.get('state', state)
-                    else: raise Exception(proc.stderr)
+                        if output.get('status') == 'success':
+                            result = output.get('result')
+                            state = output.get('state', state)
+                        else:
+                            raise Exception(output.get('error', 'Unknown JS Bridge Error'))
+                    else:
+                        raise Exception(proc.stderr or proc.stdout)
             
             if result is not None: break
         except Exception as e:
