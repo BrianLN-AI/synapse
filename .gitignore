@@ -1,0 +1,18 @@
+# Git worktrees — managed by git, not file artifacts
+worktrees/
+.claude/
+
+# Noir build artifacts
+zk-explore/**/target/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
