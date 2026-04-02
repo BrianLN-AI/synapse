@@ -1,7 +1,7 @@
 # Synapse: The D-JIT Logic Fabric
 
-**Status:** `f_3` (Collective Intelligence)  
-**Latest Baseline:** [f_2 (1.2.0-Stable)](https://github.com/BrianLN-AI/synapse/tree/f_2)  
+**Status:** `f_6` (Living Logic)  
+**Latest Baseline:** [f_3 (1.3.0-Stable)](https://github.com/BrianLN-AI/synapse/tree/f_3)  
 **Foundation:** Content-Addressed, Protocol-Oriented Compute Mesh
 
 ---
@@ -14,64 +14,60 @@ We call this the **Synaptic Cleft**. In this fabric, code is not a static file; 
 
 ---
 
+## ✨ Possibilities & Use Cases
+
+With the current `f_6` architecture, we can achieve:
+
+1.  **Self-Healing CI/CD:** A fabric that monitors its own tests, spawns fixes for failures, passes them through a Jury, and promotes the fix to production autonomously.
+2.  **Infinite Model Distillation:** Tracking expensive `inference()` calls and autonomously distilling recurring patterns into fast, cheap static logic Blobs.
+3.  **Isolated Multi-Tenant Agents:** Using the **Matryoshka Leap** to spawn entire "Sub-Fabrics" for different users, ensuring absolute data and logic isolation.
+4.  **Semantic Discovery:** Finding executable logic by **Intent** (e.g., "Summarize this PDF") rather than knowing a specific name or hash.
+5.  **Deterministic Audit Trails:** Every thought, decision, and action is an immutable Blob in the vault, allowing for 100% accurate history replay.
+
+---
+
+## 🚧 Current Frontiers (What We Can't Do Yet)
+
+The "Living Logic" is still evolving. We currently face these technical boundaries:
+
+*   **Linker Mutation (The L0 Problem):** The `seed.py` (The Linker) is a physical script. The fabric cannot yet rewrite its own BIOS and reboot into a new version of itself autonomously.
+*   **Provable Compute:** While we trust hashes for identity, we do not yet have cryptographic proofs (e.g., [ZK-Proofs](https://en.wikipedia.org/wiki/Zero-knowledge_proof)) that a remote node actually executed the code it claimed to.
+*   **Hard Resource Isolation:** We use Python and Node.js sandboxes, but we lack "Gas" limits or hard CPU/RAM constraints. A runaway Blob could still consume local system resources.
+*   **Multi-Agent Negotiation:** Blobs can call each other, but they cannot yet "negotiate" a contract or price for service without a hardcoded broker logic.
+
+---
+
 ## 📖 Lexicon & Definitions
 
 *   **D-JIT (Distributed Just-In-Time):** A runtime that resolves, plans, and executes logic across a distributed mesh exactly when needed.
-*   **Blob:** An immutable, content-addressed unit of logic or data. Identified by its [SHA-256](https://en.wikipedia.org/wiki/SHA-2) hash.
-*   **ABI (Application Binary Interface):** The strict contract for Blobs. Every blob *must* assign its output to a `result` variable and use the provided `log()` sink.
+*   **Blob:** An immutable, content-addressed unit of logic or data. Identified by its SHA-256 hash.
 *   **Capability Registry:** The identity map (manifest) that translates semantic names (like `proxy` or `broker`) into specific content-hashes.
-*   **Collective Substrate:** The shared P2P layer where vaults and state are synchronized across independent nodes.
+*   **The Matryoshka Leap:** Recursive virtualization. Running a Linker as a Blob inside another Linker.
 
 ---
 
 ## 🚀 The Evolutionary Journey
 
 ### [f_0: The Wavefunction Collapse](https://github.com/BrianLN-AI/synapse/tree/af6b1e02)
-**Goal:** Establish the baseline "Seed" and the 4-Layer Stack.
-*   **Key Achievement:** Implemented the **Recursive Leap**, where the Linker uses the fabric to find and execute its own internal layers.
-*   **Tag:** `f_0` ([af6b1e02](https://github.com/BrianLN-AI/synapse/commit/af6b1e02))
+Establishing the baseline "Seed" and the 4-Layer Recursive Stack.
 
 ### [f_1: The Distributed Leap](https://github.com/BrianLN-AI/synapse/tree/1e4dadbd)
-**Goal:** Expand the fabric beyond a single local vault.
-*   **Key Achievement:** Multi-vault resolution and **Polyglot Runtimes** (Python & Node.js).
-*   **Tag:** `f_1` ([1e4dadbd](https://github.com/BrianLN-AI/synapse/commit/1e4dadbd))
+Expanding to Multi-vault resolution and Polyglot Runtimes (Python/Node).
 
 ### [f_2: The Agentic Mesh](https://github.com/BrianLN-AI/synapse/tree/77df2c3e)
-**Goal:** Enable self-reflection and autonomous optimization.
-*   **Key Achievement:** **Dynamic Plasticity** (L3 learns from telemetry) and **Autonomous Retries** (L4 self-corrects).
-*   **Tag:** `f_2` ([77df2c3e](https://github.com/BrianLN-AI/synapse/commit/77df2c3e))
+Enabling self-reflection, autonomous retries, and Persistent Memory.
 
-### [f_3: Collective Intelligence](https://github.com/BrianLN-AI/synapse/tree/f_3) (Current)
-**Goal:** Bridge independent fabrics into a global compute mycelium.
-*   **P2P Discovery:** L2 (Librarian) now resolves hashes across a shared `collective_vault`.
-*   **Federated Arbitrage:** L3 (Broker) negotiates execution with external Synapse peers.
-*   **Location-Transparent State:** Memory (`state_id`) is synced globally, allowing agents to migrate between nodes seamlessly.
-*   **Current Hash:** [1b2db189](https://github.com/BrianLN-AI/synapse/commit/1b2db189)
+### [f_3: Collective Intelligence](https://github.com/BrianLN-AI/synapse/tree/1b2db189)
+Bridging independent fabrics into a global compute mycelium via P2P discovery.
 
----
+### [f_4: Symbiotic Intelligence](https://github.com/BrianLN-AI/synapse/tree/f_4)
+Establishing Semantic Discovery and the **Spawner/Jury** evolution loop.
 
-## 🛠 Architectural Blueprint: The 4-Layer Stack
+### [f_5: Synthetic Cognition](https://github.com/BrianLN-AI/synapse/tree/f_5)
+Refining the substrate with **Cognitive Telemetry** and **Storage Abstraction**.
 
-| Layer | Name | Responsibility |
-| :--- | :--- | :--- |
-| **L1** | **Proxy** | Normalizes intent, translates MCP (Model Context Protocol) requests. |
-| **L2** | **Librarian** | Resolves Content-Hashes across Local, Remote, and Collective Tiers. |
-| **L3** | **Broker** | Performs Federated Arbitrage. Selects the optimal node based on real-time feedback. |
-| **L4** | **Engine** | Physically binds the Blob, handles retries, and synchronizes global state. |
-
----
-
-## 🛤 The Road to f_4 (Symbiotic Intelligence)
-
-1.  **Semantic Discovery:** Searching for capabilities by *intent* rather than name or hash.
-2.  **Autonomous Evolution:** Allowing the Broker to "spawn" its own optimization blobs to improve performance.
-3.  **Governance:** Implementing consensus-based updates to the Capability Registry.
+### [f_6: Living Logic](https://github.com/BrianLN-AI/synapse/tree/f_6) (Current)
+Moving to Native RPC, Runtime Discovery, and Recursive Virtualization.
 
 ---
 *Logic exists in the Intermezzo—the space-between movement.*
-
----
-
-## License
-
-[MIT](LICENSE) — Copyright (c) 2026 Brian Lloyd-Newberry
