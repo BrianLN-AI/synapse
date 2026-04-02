@@ -34,35 +34,39 @@ def is_valid_hash(h: str) -> bool:
 # --- Storage Adapter (The Substrate Abstraction) ---
 
 class VaultAdapter:
-    def __init__(self, vault_dir: str = "blob_vault", collective_dir: str = "collective_vault"):
-        self.vault_dir = Path(vault_dir)
-        self.collective_dir = Path(collective_dir)
+    def __init__(self, vault_dir: str = "blob_vault", collective_dir: str = "collective_vault", root_dir: str = "."):
+        self.root_dir = Path(root_dir)
+        self.vault_dir = self.root_dir / vault_dir
+        self.collective_dir = self.root_dir / collective_dir
         self.telemetry_dir = self.vault_dir / "telemetry"
         self.cognitive_dir = self.vault_dir / "cognitive"
         self.state_dir = self.vault_dir / "state"
         self.proposals_dir = self.vault_dir / "proposals"
         self.signatures_dir = self.vault_dir / "signatures"
         self.index_file = self.vault_dir / "semantic_index.json"
+        self.manifest_hash_file = self.root_dir / "manifest.hash"
+
         for d in [self.vault_dir, self.telemetry_dir, self.cognitive_dir, self.state_dir, self.proposals_dir, self.signatures_dir]:
             d.mkdir(parents=True, exist_ok=True)
+
+    def get_manifest_hash(self) -> str:
+        if not self.manifest_hash_file.exists(): return None
+        return self.manifest_hash_file.read_text().strip()
+
+    def update_manifest_hash(self, h: str):
+        self.manifest_hash_file.write_text(h)
 
     def read(self, h: str, is_bios: bool = False) -> str:
         path = self.vault_dir / h
         if not path.exists() or not path.is_file(): raise FileNotFoundError(f"Blob {h} not found.")
-        with open(path, 'r') as f: return f.read()
+        return path.read_text()
 
     def write(self, data: str, type_hint: str = "generic") -> str:
         h = hashlib.sha256(data.encode()).hexdigest()
         path = self.vault_dir / h
-        with open(path, 'w') as f: f.write(data)
+        path.write_text(data)
         return h
 
-    def get_manifest_hash(self) -> str:
-        if not os.path.exists("manifest.hash"): return None
-        with open("manifest.hash", "r") as f: return f.read().strip()
-
-    def update_manifest_hash(self, h: str):
-        with open("manifest.hash", "w") as f: f.write(h)
 
     def get_state(self, state_id: str) -> dict:
         coll_path = self.collective_dir / "state" / str(state_id)
@@ -199,13 +203,24 @@ class Linker:
             payload = self.adapter.read(h)
             engine_h = self.resolve_capability("engine")
             if engine_h and h != engine_h:
-                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "SAFE_BUILTINS": SAFE_BUILTINS}
+                # Structural layers get full builtins and classes
+                scope = {
+                    "context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, 
+                    "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, 
+                    "inference": self.inference, "embed": self.embed, "SAFE_BUILTINS": SAFE_BUILTINS,
+                    "VaultAdapter": VaultAdapter, "Linker": Linker # Inject Classes
+                }
                 scope.update(primitives)
                 exec(self.adapter.read(engine_h), scope, scope)
                 result = scope.get("result")
                 state = scope.get("context", {}).get("state", state)
             else:
-                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS}
+                # Direct execution uses sandbox but can still get classes if needed for system tasks
+                scope = {
+                    "context": request_envelope, "log": log, "result": None, 
+                    "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS,
+                    "VaultAdapter": VaultAdapter, "Linker": Linker # Inject Classes
+                }
                 scope.update(primitives)
                 exec(payload, scope, scope)
                 result = scope.get("result")

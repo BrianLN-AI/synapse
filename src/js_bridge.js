@@ -1,35 +1,47 @@
 /**
- * Synapse: Native JS Bridge (f_6)
- * Handles structured execution of Synapse Blobs in Node.js.
+ * Synapse: Native JS Bridge (f_6.2)
+ * Handles structured execution and Runtime Discovery in Node.js.
  */
 
 const fs = require('fs');
 
 function run() {
     try {
-        // 1. Read the execution context from stdin (or a temporary file if needed)
-        // For f_6, we use a simple synchronous stdin read for this seed.
         const inputData = fs.readFileSync(0, 'utf8');
         const envelope = JSON.parse(inputData);
 
-        const { target_payload, target_context, state, execution_plan } = envelope;
+        const { target_payload, target_context, state, execution_plan, manifest } = envelope;
 
-        // 2. Prepare the sandbox scope
+        // --- Discovery Primitives (JS Implementation) ---
+        const list_capabilities = () => {
+            return Object.keys(manifest?.capabilities || {});
+        };
+
+        const get_capability = (name, version = 'stable') => {
+            return manifest?.capabilities?.[name]?.[version] || null;
+        };
+
+        // Note: invoke_capability in JS would require a bidirectional pipe
+        // for this Alpha, we provide resolution logic.
+        
+        // --- Sandbox Scope ---
         const context = target_context;
-        let result = null;
         let internalState = state || {};
         const log = (msg) => console.error(`[LOG] ${msg}`);
+        let result = null;
 
-        // 3. Execute the payload
-        // We use a Function constructor to create a clean execution scope
-        const blobFunc = new Function('context', 'state', 'log', 'result', `
+        const blobFunc = new Function(
+            'context', 'state', 'log', 'result', 
+            'get_capability', 'list_capabilities', `
             ${target_payload}
             return { result, state };
         `);
 
-        const output = blobFunc(context, internalState, log, result);
+        const output = blobFunc(
+            context, internalState, log, result, 
+            get_capability, list_capabilities
+        );
 
-        // 4. Return the result and updated state
         process.stdout.write(JSON.stringify({
             status: 'success',
             result: output.result,
