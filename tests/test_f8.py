@@ -278,7 +278,7 @@ def test_full_f8_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.11.0", m["version"] == "1.11.0")
+    check("manifest version 1.12.0", m["version"] == "1.12.0")
 
     for label in ["discovery", "planning", "telemetry-reader"]:
         h = m.get("blobs", {}).get(label, {}).get("logic/python")
@@ -286,11 +286,11 @@ def test_full_f8_evolution_cycle() -> None:
         ch = m.get("blobs", {}).get(label, {}).get("contract/definition")
         check(f"{label} contract still in manifest after f_8 evolution", ch is not None)
 
-    # Audit log must have v1.11.0 promote events (f_9 evolve.py promotes to v1.10.0)
+    # Audit log must have v1.12.0 promote events (f_9 evolve.py promotes to v1.10.0)
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines() if l.strip()]
     promote_v9 = [e for e in entries
-                  if e.get("event") == "promote" and e.get("version") == "1.11.0"]
-    check("at least one v1.11.0 promote event in audit log", len(promote_v9) >= 1)
+                  if e.get("event") == "promote" and e.get("version") == "1.12.0"]
+    check("at least one v1.12.0 promote event in audit log", len(promote_v9) >= 1)
 
 
 def test_audit_log_records_inference_metadata() -> None:

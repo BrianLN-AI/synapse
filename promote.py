@@ -13,7 +13,7 @@ Golden Rule: Never update manifest.hash until L1-L3 blobs verified in isolation.
 """
 
 import ast
-import hashlib
+import blake3
 import json
 import re
 import time
@@ -54,7 +54,7 @@ def _write_manifest(manifest: dict) -> str:
     """Write manifest, compute and store its own hash. Returns new hash."""
     # Strip old hash before hashing content
     content = {k: v for k, v in manifest.items() if k != "hash"}
-    manifest_hash = hashlib.sha256(
+    manifest_hash = blake3.blake3(
         json.dumps(content, sort_keys=True).encode()
     ).hexdigest()
     manifest["hash"] = manifest_hash

@@ -309,14 +309,14 @@ def test_full_f11_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.11.0", m["version"] == "1.11.0")
+    check("manifest version 1.12.0", m["version"] == "1.12.0")
     for label in ["discovery", "planning", "telemetry-reader"]:
         check(f"{label} logic blob present", m["blobs"].get(label, {}).get("logic/python") is not None)
     check("summarizer logic blob present", m["blobs"].get("summarizer", {}).get("logic/python") is not None)
 
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines() if l.strip()]
-    promote_v11 = [e for e in entries if e.get("event") == "promote" and e.get("version") == "1.11.0"]
-    check("at least one v1.11.0 promote event", len(promote_v11) >= 1)
+    promote_v11 = [e for e in entries if e.get("event") == "promote" and e.get("version") == "1.12.0"]
+    check("at least one v1.12.0 promote event", len(promote_v11) >= 1)
 
 
 # ---------------------------------------------------------------------------
