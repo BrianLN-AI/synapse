@@ -79,15 +79,15 @@ Started from `undefined` directly, without a governance layer. A solo agent buil
 
 Started from a distinct genesis commit (`f(0)`) and immediately introduced `COUNCIL.md` — a collective intelligence governance protocol. Every release milestone is an annotated tag with a tagger identity and a release summary.
 
-- **Branches:** `council/f_0` through `council/f_11`
-- **Tags (annotated):** `v1.0.0` through `v1.11.0`
+- **Branches:** `council/f_0` through `council/f_12`
+- **Tags (annotated):** `v1.0.0` through `v1.12.0`
 - **Self-modification identity:** `f_n = f_{n-1}(f_{n-1})` — each cycle uses the previous version to produce the next
 
 > Note: `council/f_0` is a **branch name** (git uses `/` in names); it is not a directory.
 
 ### Current Status
 
-**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). Latest stable council release: **v1.11.0** (`council/f_11`). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
+**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). Latest stable council release: **v1.12.0** (`council/f_12`). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
 
 ---
 
@@ -123,7 +123,7 @@ To avoid infinite recursion (Discovery needs Discovery to find Discovery):
 
 ## 🚀 Quick Start
 
-> **You are on `main`.** To run the fabric, check out an experiment branch first (e.g., `git checkout council/f_11` for the latest council release, or `git checkout f_2` for the non-council track).
+> **You are on `main`.** To run the fabric, check out an experiment branch first (e.g., `git checkout council/f_12` for the latest council release, or `git checkout f_2` for the non-council track).
 
 ### Prerequisites
 
