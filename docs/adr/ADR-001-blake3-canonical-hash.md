@@ -1,7 +1,7 @@
 # ADR-001: blake3 as Canonical Content-Address Hash Function
 
 **Date:** 2026-04-01
-**Status:** Accepted — decision made; code migration pending (tracked separately)
+**Status:** Accepted — fully implemented (Python layer: v1.12.0; Noir O2 circuit: main)
 **Supersedes:** SHA-256 usage in ADR-003 (manifest hash) and ADR-004 (vault address)
 **Superseded by:** —
 
@@ -80,12 +80,15 @@ in new code.
 
 ## Consequences
 
-**Planned (not yet implemented — code still uses SHA-256 as of v1.11.0):**
-- `seed.py:104` — replace `hashlib.sha256` with `blake3.blake3` (pip install blake3)
-- `promote.py:57` — replace `hashlib.sha256` with `blake3.blake3`
-- Vault migration: re-key existing blobs from SHA-256 to blake3 addresses (migration script needed)
-- O2 circuit (`zk-explore/blob_abi_v2`): replace `std::hash::blake2s` with `std::hash::blake3`
+**Implemented:**
+- `seed.py` — blake3.blake3 used for vault address (f_12 / v1.12.0)
+- `promote.py` — blake3.blake3 used for manifest hash (f_12 / v1.12.0)
+- O2 circuit (`zk-explore/blob_abi_v2`) — std::hash::blake3, nargo test 5/5 (main)
 - `f(undefined).md` updated to v1.3.0 to reflect blake3 in the Discovery layer
+
+**Remaining:**
+- Vault migration script: re-key existing blobs from SHA-256 to blake3 addresses
+  (only needed for persisted vaults; test/council vaults rebuild from scratch each cycle)
 
 **Ongoing:**
 - All agents bootstrapped from `f(undefined).md` or `AGENTS.md` will use blake3 by default
