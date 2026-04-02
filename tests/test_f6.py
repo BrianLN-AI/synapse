@@ -340,15 +340,15 @@ def test_full_f6_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.12.0", m["version"] == "1.12.0")
+    check("manifest version 1.13.0", m["version"] == "1.13.0")
     for label in ["discovery", "planning", "telemetry-reader"]:
         h = m.get("blobs", {}).get(label, {}).get("logic/python")
         check(f"{label} in manifest", h is not None)
 
     # Audit log must show promotions signed by the evolve-engine reviewer
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines() if l.strip()]
-    promote_events = [e for e in entries if e.get("event") == "promote" and e.get("version") == "1.12.0"]
-    check("at least one promote event with version 1.12.0", len(promote_events) >= 1)
+    promote_events = [e for e in entries if e.get("event") == "promote" and e.get("version") == "1.13.0"]
+    check("at least one promote event with version 1.13.0", len(promote_events) >= 1)
     evolve_hash = _boot.get("evolve_reviewer_hash", "")
     if promote_events and evolve_hash:
         check("f_6 promotions signed by evolve-engine reviewer",

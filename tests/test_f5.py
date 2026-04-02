@@ -266,7 +266,7 @@ def test_full_f5_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.12.0", m["version"] == "1.12.0")
+    check("manifest version 1.13.0", m["version"] == "1.13.0")
     for label in ["discovery", "planning", "telemetry-reader"]:
         h = m.get("blobs", {}).get(label, {}).get("logic/python")
         check(f"{label} in manifest", h is not None)

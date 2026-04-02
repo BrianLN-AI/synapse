@@ -320,7 +320,7 @@ def test_full_f7_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.12.0", m["version"] == "1.12.0")
+    check("manifest version 1.13.0", m["version"] == "1.13.0")
     for label in ["discovery", "planning", "telemetry-reader"]:
         h = m.get("blobs", {}).get(label, {}).get("logic/python")
         check(f"{label} logic blob in manifest", h is not None)
@@ -331,8 +331,8 @@ def test_full_f7_evolution_cycle() -> None:
     # Promoted blobs were checked by ContractCompliance (Pass 6)
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines() if l.strip()]
     promote_v7 = [e for e in entries
-                  if e.get("event") == "promote" and e.get("version") == "1.12.0"]
-    check("at least one v1.12.0 promote event in audit log", len(promote_v7) >= 1)
+                  if e.get("event") == "promote" and e.get("version") == "1.13.0"]
+    check("at least one v1.13.0 promote event in audit log", len(promote_v7) >= 1)
 
 
 # ---------------------------------------------------------------------------

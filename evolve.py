@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 evolve.py — D-JIT Logic Fabric Self-Modification Engine
-f_12: blake3 as canonical hash function (ADR-001).
+f_13: engine-as-expression kernel split.
 
 Cycle per blob (infrastructure or capability):
   1. Evaluate:  read current hash from manifest, get fitness signals from telemetry
@@ -1868,7 +1868,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.12.0",
+        version="1.13.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -1898,7 +1898,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
     are fresh for subsequent benchmarks.
     """
     tolerance = _derive_tolerance()
-    print(f"── f_12: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
+    print(f"── f_13: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
 
     manifest = promote.load_manifest()
     all_labels = list(manifest.get("blobs", {}).keys())
@@ -1918,7 +1918,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         results.append(r)
 
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_12 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.12.0")
+    print(f"\n  f_13 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.13.0")
     return results
 
 
