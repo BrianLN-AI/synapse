@@ -7,6 +7,31 @@ import glob
 import subprocess
 from pathlib import Path
 
+# --- Safety & Security (f_5 Hardening) ---
+
+_b = vars(__builtins__) if hasattr(__builtins__, "__dict__") else __builtins__
+SAFE_BUILTINS = {
+    k: _b[k] for k in [
+        'abs', 'all', 'any', 'ascii', 'bin', 'bool', 'bytearray', 'bytes', 'chr',
+        'complex', 'dict', 'dir', 'divmod', 'enumerate', 'filter', 'float',
+        'format', 'frozenset', 'getattr', 'hasattr', 'hash', 'hex', 'id', 'int',
+        'isinstance', 'issubclass', 'iter', 'len', 'list', 'locals', 'map', 'max',
+        'min', 'next', 'object', 'oct', 'ord', 'pow', 'print', 'range', 'repr',
+        'reversed', 'round', 'set', 'setattr', 'slice', 'sorted', 'str', 'sum',
+        'tuple', 'type', 'vars', 'zip', 'Exception', 'ValueError', 'TypeError', 
+        'KeyError', 'IndexError', 'StopIteration'
+    ] if k in _b
+}
+
+def is_valid_hash(h: str) -> bool:
+    """Strict SHA-256 Hex Validation."""
+    if not isinstance(h, str) or len(h) != 64: return False
+    try:
+        int(h, 16)
+        return True
+    except ValueError:
+        return False
+
 # --- Storage Adapter (The Substrate Abstraction) ---
 
 class VaultAdapter:
@@ -137,13 +162,16 @@ class Linker:
         root_h = self.adapter.get_manifest_hash()
         if not root_h: return None
         try:
-            manifest = json.loads(self.adapter.read(root_h))
+            manifest_data = self.adapter.read(root_h)
+            manifest = json.loads(manifest_data)
             return manifest.get("capabilities", {}).get(name, {}).get(version)
-        except: return None
+        except (json.JSONDecodeError, FileNotFoundError):
+            return None
 
     def invoke(self, h: str, context: dict = None) -> dict:
-        if not h or not isinstance(h, str):
-            return {"result": None, "status": "failure", "error": "Invalid or empty Blob Hash provided."}
+        if not is_valid_hash(h):
+            return {"result": None, "status": "failure", "error": f"Invalid SHA-256 Hash provided: {h}"}
+        
         start_time = time.perf_counter()
         context = context or {}
         logs = []
@@ -154,20 +182,24 @@ class Linker:
         request_envelope = context
         if proxy_h and h != proxy_h:
             try:
+                # Structural layers get full builtins
                 scope = {"context": {"request": context, "timestamp": time.time(), "trace_id": "syn-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]}, "log": log, "result": None, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed}
                 exec(self.adapter.read(proxy_h), scope, scope)
                 request_envelope = scope.get("result", request_envelope)
-            except: pass
+            except Exception as e:
+                log(f"Proxy Error: {str(e)}")
 
         # 2. Broker
         execution_plan = {"method": "local_exec", "sandbox": "standard"}
         broker_h = self.resolve_capability("broker")
         if broker_h and h != broker_h:
             try:
+                # Structural layers get full builtins
                 scope = {"context": {"target": h, "request": request_envelope}, "log": log, "result": None, "os": os, "glob": glob, "json": json, "hashlib": hashlib, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "rerank": self.rerank, "put": self.adapter.write, "propose": self.propose}
                 exec(self.adapter.read(broker_h), scope, scope)
                 if scope.get("result"): execution_plan = scope["result"]
-            except: pass
+            except Exception as e:
+                log(f"Broker Error: {str(e)}")
 
         # 3. State
         state_id = request_envelope.get("params", {}).get("state_id")
@@ -178,12 +210,14 @@ class Linker:
             payload = self.adapter.read(h)
             engine_h = self.resolve_capability("engine")
             if engine_h and h != engine_h:
-                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed}
+                # Structural layers get full builtins
+                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "SAFE_BUILTINS": SAFE_BUILTINS}
                 exec(self.adapter.read(engine_h), scope, scope)
                 result = scope.get("result")
                 state = scope.get("context", {}).get("state", state)
             else:
-                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed}
+                # Direct execution uses sandbox
+                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS, "inference": self.inference, "embed": self.embed}
                 exec(payload, scope, scope)
                 result = scope.get("result")
                 state = scope.get("state", state)
@@ -197,10 +231,9 @@ class Linker:
             error = str(e)
             result = None
 
-        # Telemetry
         telemetry = {"blob_hash": h, "request_envelope": request_envelope, "execution_plan": execution_plan, "status": status, "latency": time.perf_counter() - start_time, "logs": logs, "error": error, "timestamp": time.time()}
         self.adapter.write(json.dumps(telemetry))
-        return {"result": result, "status": status}
+        return {"result": result, "status": status, "error": error}
 
 def main():
     adapter = VaultAdapter()

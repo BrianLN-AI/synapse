@@ -9,6 +9,9 @@ node = target_plan.get('node', 'unknown')
 retry_policy = target_plan.get('retry_policy', {'max_attempts': 1, 'backoff': 0})
 spawned_hash = target_plan.get('spawned_hash')
 
+# Use SAFE_BUILTINS if provided by Linker, else fallback
+sandbox_builtins = globals().get('SAFE_BUILTINS', __builtins__)
+
 # --- SPAWNER INTERCEPT ---
 if spawned_hash:
     log(f"L4: Intercepting Spawner output. Proposal ID: {target_plan.get('proposal_id')}")
@@ -40,9 +43,9 @@ else:
                         'result': None, 
                         'execution_plan': target_plan,
                         'state': state,
-                        '__builtins__': __builtins__,
-                        'inference': inference, # INJECT COGNITIVE
-                        'embed': embed           # INJECT COGNITIVE
+                        '__builtins__': sandbox_builtins, # Use Sandbox
+                        'inference': inference,
+                        'embed': embed
                     }
                     exec(target_payload, target_scope, target_scope)
                     result = target_scope.get('result')
