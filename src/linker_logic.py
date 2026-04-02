@@ -45,9 +45,24 @@ class VaultAdapter:
         self.signatures_dir = self.vault_dir / "signatures"
         self.index_file = self.vault_dir / "semantic_index.json"
         self.manifest_hash_file = self.root_dir / "manifest.hash"
-
         for d in [self.vault_dir, self.telemetry_dir, self.cognitive_dir, self.state_dir, self.proposals_dir, self.signatures_dir]:
             d.mkdir(parents=True, exist_ok=True)
+
+    def read(self, h: str, is_bios: bool = False) -> str:
+        path = self.vault_dir / h
+        if not path.exists() or not path.is_file(): raise FileNotFoundError(f"Blob {h} not found.")
+        return path.read_text()
+
+    def write(self, data: str, type_hint: str = "generic", lineage: dict = None) -> str:
+        h = hashlib.sha256(data.encode()).hexdigest()
+        path = self.vault_dir / h
+        path.write_text(data)
+        if lineage:
+            prov_data = {"blob_hash": h, "type_hint": type_hint, "lineage": lineage, "timestamp": time.time()}
+            prov_path = self.vault_dir / "providence" / h
+            prov_path.parent.mkdir(parents=True, exist_ok=True)
+            prov_path.write_text(json.dumps(prov_data))
+        return h
 
     def get_manifest_hash(self) -> str:
         if not self.manifest_hash_file.exists(): return None
@@ -55,18 +70,6 @@ class VaultAdapter:
 
     def update_manifest_hash(self, h: str):
         self.manifest_hash_file.write_text(h)
-
-    def read(self, h: str, is_bios: bool = False) -> str:
-        path = self.vault_dir / h
-        if not path.exists() or not path.is_file(): raise FileNotFoundError(f"Blob {h} not found.")
-        return path.read_text()
-
-    def write(self, data: str, type_hint: str = "generic") -> str:
-        h = hashlib.sha256(data.encode()).hexdigest()
-        path = self.vault_dir / h
-        path.write_text(data)
-        return h
-
 
     def get_state(self, state_id: str) -> dict:
         coll_path = self.collective_dir / "state" / str(state_id)
@@ -127,7 +130,6 @@ class Linker:
         return h
 
     def sign(self, prop_id: str, node_id: str = "local-node", conditions: dict = None) -> str:
-        """Issues a conditional cryptographic signature (Attestation)."""
         data = {"target_id": prop_id, "node_id": node_id, "timestamp": time.time(), "conditions": conditions or {}}
         h = hashlib.sha256(json.dumps(data).encode()).hexdigest()
         d = self.adapter.signatures_dir / prop_id
@@ -136,7 +138,6 @@ class Linker:
         return h
 
     def is_authorized(self, h: str, context: dict) -> bool:
-        """Verifies if a hash has valid attestations for the current context."""
         d = self.adapter.signatures_dir / h
         if not d.exists(): return False
         current_trace = context.get('metadata', {}).get('trace_id')
@@ -156,7 +157,6 @@ class Linker:
         return len(list(d.glob("*.sig"))) if d.exists() else 0
 
     def branch(self, name: str) -> str:
-        """Forks the current fabric into a separate temporal branch (Sub-Fabric)."""
         branch_root = self.adapter.root_dir / "branches" / name
         branch_root.mkdir(parents=True, exist_ok=True)
         root_h = self.adapter.get_manifest_hash()
@@ -164,13 +164,11 @@ class Linker:
         return str(branch_root)
 
     def rollback(self, h: str):
-        """Reverts the system root to a previous manifest hash."""
         try:
             self.adapter.read(h)
             self.adapter.update_manifest_hash(h)
             return f"Rollback success: Root is now {h}"
-        except Exception as e:
-            return f"Rollback failed: {str(e)}"
+        except Exception as e: return f"Rollback failed: {str(e)}"
 
     def resolve_capability(self, name: str, version: str = "stable") -> str:
         root_h = self.adapter.get_manifest_hash()
@@ -199,28 +197,9 @@ class Linker:
         context = context or {}
         logs = []
         def log(msg): logs.append(f"[{time.time()}] {msg}")
-
-        # --- CORE PRIMITIVES (Safe for all) ---
-        primitives = {
-            "inference": self.inference, "embed": self.embed, "rerank": self.rerank,
-            "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities,
-            "invoke_capability": self.invoke_capability, "read_blob": self.adapter.read,
-            "json": json
-        }
-
-        # --- ADMIN PRIMITIVES (Attestation Required) ---
+        primitives = {"inference": self.inference, "embed": self.embed, "rerank": self.rerank, "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities, "invoke_capability": self.invoke_capability, "read_blob": self.adapter.read, "json": json}
         if self.is_authorized(h, context):
-            log(f"Linker: ATTESTATION VERIFIED for {h}. Injecting Admin Primitives.")
-            primitives.update({
-                "put": self.adapter.write, 
-                "propose": self.propose,
-                "branch": self.branch, 
-                "rollback": self.rollback,
-                "sign": self.sign,
-                "tally": self.tally
-            })
-
-        # 1. Proxy
+            primitives.update({"put": self.adapter.write, "propose": self.propose, "branch": self.branch, "rollback": self.rollback, "sign": self.sign, "tally": self.tally})
         proxy_h = self.resolve_capability("proxy")
         request_envelope = context
         if proxy_h and h != proxy_h:
@@ -230,55 +209,34 @@ class Linker:
                 exec(self.adapter.read(proxy_h), scope, scope)
                 request_envelope = scope.get("result", request_envelope)
             except Exception as e: log(f"Proxy Error: {str(e)}")
-
-        # 2. Broker
         execution_plan = {"method": "local_exec", "sandbox": "standard"}
         broker_h = self.resolve_capability("broker")
         if broker_h and h != broker_h:
             try:
-                scope = {"context": {"target": h, "request": request_envelope}, "log": log, "result": None, "os": os, "glob": glob, "json": json, "hashlib": hashlib, "__builtins__": __builtins__, "SAFE_BUILTINS": SAFE_BUILTINS}
+                scope = {"context": {"target": h, "request": request_envelope}, "log": log, "result": None, "os": os, "glob": glob, "json": json, "hashlib": hashlib, "__builtins__": __builtins__, "SAFE_BUILTINS": SAFE_BUILTINS, "put": self.adapter.write, "propose": self.propose}
                 scope.update(primitives)
                 exec(self.adapter.read(broker_h), scope, scope)
                 if scope.get("result"): execution_plan = scope["result"]
             except Exception as e: log(f"Broker Error: {str(e)}")
-
-        # 3. State
         state_id = request_envelope.get("params", {}).get("state_id")
         state = self.adapter.get_state(state_id) if state_id else {}
-
-        # 4. Engine
         try:
             payload = self.adapter.read(h)
             engine_h = self.resolve_capability("engine")
             if engine_h and h != engine_h:
-                # Structural layers get full builtins and classes
-                scope = {
-                    "context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, 
-                    "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, 
-                    "inference": self.inference, "embed": self.embed, "SAFE_BUILTINS": SAFE_BUILTINS,
-                    "VaultAdapter": VaultAdapter, "Linker": Linker # Inject Classes
-                }
+                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "SAFE_BUILTINS": SAFE_BUILTINS, "VaultAdapter": VaultAdapter, "Linker": Linker}
                 scope.update(primitives)
                 exec(self.adapter.read(engine_h), scope, scope)
-                result = scope.get("result")
-                state = scope.get("context", {}).get("state", state)
+                result = scope.get("result"); state = scope.get("context", {}).get("state", state)
             else:
-                # Direct execution uses sandbox but can still get classes if needed for system tasks
-                scope = {
-                    "context": request_envelope, "log": log, "result": None, 
-                    "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS,
-                    "VaultAdapter": VaultAdapter, "Linker": Linker # Inject Classes
-                }
+                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS, "inference": self.inference, "embed": self.embed, "VaultAdapter": VaultAdapter, "Linker": Linker}
                 scope.update(primitives)
                 exec(payload, scope, scope)
-                result = scope.get("result")
-                state = scope.get("state", state)
-            
+                result = scope.get("result"); state = scope.get("state", state)
             if result is None: raise ValueError("ABI Violation: No result assigned.")
             if state_id: self.adapter.put_state(state_id, state)
             status = "success"; error = None
         except Exception as e: status = "failure"; error = str(e); result = None
-
         telemetry = {"blob_hash": h, "request_envelope": request_envelope, "execution_plan": execution_plan, "status": status, "latency": time.perf_counter() - start_time, "logs": logs, "error": error, "timestamp": time.time()}
         self.adapter.write(json.dumps(telemetry))
         return {"result": result, "status": status, "error": error}
@@ -287,7 +245,11 @@ def main():
     adapter = VaultAdapter(); linker = Linker(adapter)
     if len(sys.argv) < 2: print("Usage: seed.py <command> [args]"); sys.exit(1)
     cmd = sys.argv[1]
-    if cmd == "put": print(adapter.write(Path(sys.argv[2]).read_text() if os.path.exists(sys.argv[2]) else sys.argv[2]))
+    if cmd == "put":
+        payload = Path(sys.argv[2]).read_text() if os.path.exists(sys.argv[2]) else sys.argv[2]
+        type_hint = sys.argv[3] if len(sys.argv) > 3 else "generic"
+        lineage = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
+        print(adapter.write(payload, type_hint, lineage))
     elif cmd == "index":
         idx = adapter.index_get()
         idx[sys.argv[2]] = {"hash": sys.argv[2], "description": sys.argv[3], "vector": linker.embed(sys.argv[3])}

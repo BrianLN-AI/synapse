@@ -2,59 +2,40 @@ import os, sys, json, hashlib
 from pathlib import Path
 
 # --- THE BOOTLOADER (f_10 Sovereign Intelligence) ---
-# Decides the system root based on Tenant-Scoped Gossip Consensus.
-
-VAULT_DIR = Path("blob_vault")
-GOSSIP_DIR = Path("gossip")
 
 def _boot_get(h: str) -> str:
-    path = VAULT_DIR / h
+    path = Path("blob_vault") / h
     if not path.exists(): raise FileNotFoundError(f"Blob {h} not found during Boot.")
     return path.read_text()
 
 def resolve_root(tenant_id: str = "global"):
-    """Resolves the system root hash for a specific tenant via Gossip."""
-    if GOSSIP_DIR.exists():
+    gossip_dir = Path("gossip")
+    if gossip_dir.exists():
         votes = {}
-        for gossip_file in GOSSIP_DIR.glob("*.json"):
+        for gossip_file in gossip_dir.glob("*.json"):
             try:
                 data = json.loads(gossip_file.read_text())
-                # Filter by Tenant ID
-                if data.get("tenant_id", "global") != tenant_id:
-                    continue
-                    
+                if data.get("tenant_id", "global") != tenant_id: continue
                 root_h = data.get("root_h")
                 sigs = data.get("signatures", [])
-                if root_h:
-                    votes[root_h] = votes.get(root_h, 0) + len(sigs)
+                if root_h: votes[root_h] = votes.get(root_h, 0) + len(sigs)
             except: continue
-        
         if votes:
             winner = max(votes.items(), key=lambda x: x[1])[0]
-            print(f"Bootloader: Consensus reached for tenant '{tenant_id}'. Winner: {winner[:8]}")
+            print(f"Bootloader: Consensus reached for tenant '{tenant_id}'. Winner: {winner[:8]}", file=sys.stderr)
             return winner
-
-    # Fallback to local root (BIOS)
-    # We now support tenant-specific local roots
     manifest_hash_file = Path(f"manifest_{tenant_id}.hash")
-    if not manifest_hash_file.exists():
-        manifest_hash_file = Path("manifest.hash")
-        
-    if manifest_hash_file.exists():
-        return manifest_hash_file.read_text().strip()
-    
+    if not manifest_hash_file.exists(): manifest_hash_file = Path("manifest.hash")
+    if manifest_hash_file.exists(): return manifest_hash_file.read_text().strip()
     return None
 
 def boot():
-    # Parse Tenant from CLI args if provided
     tenant_id = "global"
     if "--tenant" in sys.argv:
         idx = sys.argv.index("--tenant")
         if idx + 1 < len(sys.argv):
             tenant_id = sys.argv[idx + 1]
-            # Remove from argv to not confuse the Linker main()
-            sys.argv.pop(idx)
-            sys.argv.pop(idx)
+            sys.argv.pop(idx); sys.argv.pop(idx)
 
     try:
         root_h = resolve_root(tenant_id)
@@ -69,14 +50,28 @@ def boot():
             sys.exit(1)
             
         linker_payload = _boot_get(linker_h)
-        # Inject tenant_id into the globals so the Linker knows who it is
-        exec_globals = globals().copy()
-        exec_globals["CURRENT_TENANT"] = tenant_id
-        exec(linker_payload, exec_globals)
+        
+        # --- EXECUTION ---
+        # We use a clean dictionary for globals to avoid name clashes
+        # but ensure current_tenant is passed.
+        exec_scope = {
+            "__builtins__": __builtins__,
+            "CURRENT_TENANT": tenant_id,
+            "os": os, "sys": sys, "json": json, "hashlib": hashlib, "time": time, "glob": glob, "subprocess": subprocess, "Path": Path
+        }
+        exec(linker_payload, exec_scope, exec_scope)
+        
+        # --- START BRAIN ---
+        if "main" in exec_scope:
+            exec_scope["main"]()
+        else:
+            print("Linker Error: No 'main()' found in Linker Blob.", file=sys.stderr)
+            sys.exit(1)
         
     except Exception as e:
-        print(f"Bootloader Failure: {str(e)}")
+        print(f"Bootloader Failure: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
+    import time, glob, subprocess # Ensure these are available
     boot()
