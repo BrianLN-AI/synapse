@@ -36,22 +36,13 @@ else:
                 result = f"Collective success on {node}."
             else:
                 if runtime == 'python':
-                    # Inject classes for Matryoshka support
                     target_scope = {
-                        'context': target_context, 
-                        'log': log, 
-                        'result': None, 
-                        'execution_plan': target_plan,
-                        'state': state,
-                        '__builtins__': sandbox_builtins,
-                        'inference': inference,
-                        'embed': embed,
-                        'rerank': rerank,
-                        'get_capability': get_capability,
-                        'list_capabilities': list_capabilities,
-                        'invoke_capability': invoke_capability,
-                        'VaultAdapter': globals().get('VaultAdapter'), # f_6 Matryoshka
-                        'Linker': globals().get('Linker')              # f_6 Matryoshka
+                        'context': target_context, 'log': log, 'result': None, 
+                        'execution_plan': target_plan, 'state': state,
+                        '__builtins__': sandbox_builtins, 'inference': inference, 'embed': embed, 'rerank': rerank,
+                        'get_capability': get_capability, 'list_capabilities': list_capabilities, 'invoke_capability': invoke_capability,
+                        'VaultAdapter': globals().get('VaultAdapter'), 'Linker': globals().get('Linker'),
+                        'branch': globals().get('branch') # f_7 Temporal
                     }
                     exec(target_payload, target_scope, target_scope)
                     result = target_scope.get('result')
