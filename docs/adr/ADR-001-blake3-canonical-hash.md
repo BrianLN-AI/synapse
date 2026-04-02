@@ -1,8 +1,8 @@
 # ADR-001: blake3 as Canonical Content-Address Hash Function
 
 **Date:** 2026-04-01
-**Status:** Accepted
-**Supersedes:** —
+**Status:** Accepted — decision made; code migration pending (tracked separately)
+**Supersedes:** SHA-256 usage in ADR-003 (manifest hash) and ADR-004 (vault address)
 **Superseded by:** —
 
 ---
@@ -80,7 +80,7 @@ in new code.
 
 ## Consequences
 
-**Immediate:**
+**Planned (not yet implemented — code still uses SHA-256 as of v1.11.0):**
 - `seed.py:104` — replace `hashlib.sha256` with `blake3.blake3` (pip install blake3)
 - `promote.py:57` — replace `hashlib.sha256` with `blake3.blake3`
 - Vault migration: re-key existing blobs from SHA-256 to blake3 addresses (migration script needed)

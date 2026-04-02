@@ -57,6 +57,7 @@ Two parallel experiment lineages evolve from the same shared base:
                                    [tag: v1.8.0]          f_8 = f_7(f_7)
                                    [tag: v1.9.0]          f_9 = f_8(f_8)
                                    [tag: v1.10.0]         f_10 = f_9(f_9)
+                                   [tag: v1.11.0]         f_11 = f_10(f_10)
 ```
 
 > **No experiment code lives on `main` yet.** `main` is stable docs and pointers only.
@@ -78,15 +79,15 @@ Started from `undefined` directly, without a governance layer. A solo agent buil
 
 Started from a distinct genesis commit (`f(0)`) and immediately introduced `COUNCIL.md` — a collective intelligence governance protocol. Every release milestone is an annotated tag with a tagger identity and a release summary.
 
-- **Branches:** `council/f_0` through `council/f_10`
-- **Tags (annotated):** `v1.0.0` through `v1.10.0`
+- **Branches:** `council/f_0` through `council/f_11`
+- **Tags (annotated):** `v1.0.0` through `v1.11.0`
 - **Self-modification identity:** `f_n = f_{n-1}(f_{n-1})` — each cycle uses the previous version to produce the next
 
 > Note: `council/f_0` is a **branch name** (git uses `/` in names); it is not a directory.
 
 ### Current Status
 
-**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). Latest stable council release: **v1.10.0** (`council/f_10`). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
+**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). Latest stable council release: **v1.11.0** (`council/f_11`). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
 
 ---
 
@@ -122,7 +123,7 @@ To avoid infinite recursion (Discovery needs Discovery to find Discovery):
 
 ## 🚀 Quick Start
 
-> **You are on `main`.** To run the fabric, check out an experiment branch first (e.g., `git checkout council/f_10` for the latest council release, or `git checkout f_2` for the non-council track).
+> **You are on `main`.** To run the fabric, check out an experiment branch first (e.g., `git checkout council/f_11` for the latest council release, or `git checkout f_2` for the non-council track).
 
 ### Prerequisites
 
@@ -250,6 +251,7 @@ Synapse tracks its evolutionary lineage using **git branches as iterations** and
 | `council/f_8` (tag: `v1.8.0`) | `f_8 = f_7(f_7)` | Inference-generated candidates via ai CLI / Cloudflare AI Gateway |
 | `council/f_9` (tag: `v1.9.0`) | `f_9 = f_8(f_8)` | Adversarial test authorship (two-model pipeline: gemini-flash implementor, devstral tester; test/case blobs, test suite gate) |
 | `council/f_10` (tag: `v1.10.0`) | `f_10 = f_9(f_9)` | Guided mutation goals from audit log trends + multi-candidate N=3 + dropped deterministic fallback |
+| `council/f_11` (tag: `v1.11.0`) | `f_11 = f_10(f_10)` | Goal/OKR blob type + capability bootstrap + GOKR execution engine; run_all() discovers labels dynamically |
 
 See [docs/experiments.md](docs/experiments.md) for the full lineage histories and tag notes.
 
