@@ -1680,8 +1680,8 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
             mutation_goal=goal,
         )
         generated_via_inference = True
-        inference_model = "haiku"
-        print(f"  generated via inference (haiku)")
+        inference_model = "gemini-flash"
+        print(f"  generated via inference (gemini-flash)")
     except infer.InferenceUnavailable as e:
         print(f"  inference unavailable ({e!s:.60}) — using deterministic mutation")
         candidate_payload = _MUTATIONS.get(label)

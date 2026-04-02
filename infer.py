@@ -3,9 +3,13 @@
 infer.py — Inference interface for the D-JIT Logic Fabric evolve engine (f_8)
 
 Generates candidate blob payloads by calling the `ai` CLI binary (subprocess).
-Credentials (CF_ACCOUNT_ID, CF_GATEWAY_NAME, CF_AIG_TOKEN) are consumed by the
-`ai` binary from os.environ — they never appear in subprocess arguments, vault
-blobs, or audit log entries.
+Credentials are managed by the ai daemon's routing configuration — they never
+appear in subprocess arguments, vault blobs, or audit log entries.
+
+Model selection: use a non-CLI-Claude alias (e.g. gemini-flash, devstral) so
+the ai daemon routes through Cloudflare AI Gateway rather than cli/claude.
+The cli/claude route injects the CLAUDE.md context which includes TypeScript-only
+skill development constraints — those constraints must not apply to blob generation.
 
 If the `ai` binary is unavailable or returns a non-zero exit code, raises
 InferenceUnavailable so the caller can fall back to a deterministic mutation.
@@ -26,7 +30,7 @@ def generate_candidate(
     contract: dict,
     fitness: dict,
     mutation_goal: str,
-    model: str = "haiku",
+    model: str = "gemini-flash",
 ) -> str:
     """
     Generate a candidate blob payload via LLM inference.
@@ -36,7 +40,9 @@ def generate_candidate(
         contract:        Parsed contract/definition record with 'pre' and 'post' keys.
         fitness:         Dict with keys success_rate, avg_latency_ms, invocation_count.
         mutation_goal:   One-line description of what the candidate should improve.
-        model:           ai binary model alias (default: haiku for speed).
+        model:           ai binary model alias. Must route through Cloudflare AI Gateway
+                         (not cli/claude) to avoid CLAUDE.md skill constraints. Default:
+                         gemini-flash (fast, no system prompt injection).
 
     Returns:
         Python source string suitable for seed.put("logic/python", ...).
@@ -50,11 +56,11 @@ def generate_candidate(
     prompt = _build_prompt(current_payload, contract, fitness, mutation_goal)
 
     result = subprocess.run(
-        ["ai", "--no-daemon", model, prompt],
+        ["ai", model, prompt],
         capture_output=True,
         text=True,
         timeout=90,
-        env=os.environ,  # CF credentials live here; never passed as arguments
+        env=os.environ,  # credentials managed by ai daemon config, not env vars here
     )
 
     if result.returncode != 0:
@@ -108,14 +114,18 @@ def _build_prompt(
 
 def _extract_source(response: str) -> str:
     """Strip markdown code fences if present; return raw Python source."""
-    # ```python ... ```
+    # ```python ... ``` (complete fence)
     match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
     if match:
         return match.group(1).strip()
-    # ``` ... ```  (no language tag)
+    # ``` ... ```  (no language tag, complete fence)
     match = re.search(r"```\n(.*?)```", response, re.DOTALL)
     if match:
         return match.group(1).strip()
+    # Fence opened but never closed — strip the opening line and return rest
+    lines = response.strip().splitlines()
+    if lines and lines[0].strip() in ("```python", "```"):
+        return "\n".join(lines[1:]).strip()
     return response.strip()
 
 

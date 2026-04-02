@@ -227,7 +227,7 @@ def test_evolve_one_records_inference_flag_when_used() -> None:
         check("generated_via_inference=True in promoted result",
               result.get("generated_via_inference") is True)
         check("inference_model recorded",
-              result.get("inference_model") == "haiku")
+              result.get("inference_model") == "gemini-flash")
     else:
         # No improvement is acceptable — v8 vs v8 may tie
         check("outcome is no-improvement (inference ran, no net gain)",
@@ -248,7 +248,7 @@ def test_full_f8_evolution_cycle() -> None:
     }
     call_count = [0]
 
-    def mock_generate(current_payload, contract, fitness, mutation_goal, model="haiku"):
+    def mock_generate(current_payload, contract, fitness, mutation_goal, model="gemini-flash"):
         call_count[0] += 1
         for label, payload in _payloads.items():
             if label in mutation_goal.lower() or any(kw in mutation_goal for kw in ["discovery", "planning", "telemetry"]):
@@ -259,7 +259,7 @@ def test_full_f8_evolution_cycle() -> None:
     # Use a label-keyed approach: patch generate_candidate to return per-label payloads
     label_order = []
 
-    def mock_generate_ordered(current_payload, contract, fitness, mutation_goal, model="haiku"):
+    def mock_generate_ordered(current_payload, contract, fitness, mutation_goal, model="gemini-flash"):
         # Return v8 payload for whichever label we're currently evolving
         # Detect label from mutation_goal content
         for label in ["telemetry-reader", "planning", "discovery"]:
