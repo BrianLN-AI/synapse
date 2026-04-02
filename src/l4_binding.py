@@ -36,6 +36,7 @@ else:
                 result = f"Collective success on {node}."
             else:
                 if runtime == 'python':
+                    # Inject state AND all primitives into target scope
                     target_scope = {
                         'context': target_context, 
                         'log': log, 
@@ -44,7 +45,11 @@ else:
                         'state': state,
                         '__builtins__': sandbox_builtins,
                         'inference': inference,
-                        'embed': embed
+                        'embed': embed,
+                        'rerank': rerank,
+                        'get_capability': get_capability,
+                        'list_capabilities': list_capabilities,
+                        'invoke_capability': invoke_capability
                     }
                     exec(target_payload, target_scope, target_scope)
                     result = target_scope.get('result')
@@ -52,30 +57,25 @@ else:
 
                 elif runtime == 'javascript':
                     import json, subprocess
-                    # --- f_6: Native JS Bridge ---
                     envelope = {
                         "target_payload": target_payload,
                         "target_context": target_context,
                         "state": state,
                         "execution_plan": target_plan
                     }
-                    # Call the formal JS bridge via subprocess
                     proc = subprocess.run(
                         ['node', 'src/js_bridge.js'], 
                         input=json.dumps(envelope), 
                         capture_output=True, 
                         text=True
                     )
-                    
                     if proc.returncode == 0:
                         output = json.loads(proc.stdout)
                         if output.get('status') == 'success':
                             result = output.get('result')
                             state = output.get('state', state)
-                        else:
-                            raise Exception(output.get('error', 'Unknown JS Bridge Error'))
-                    else:
-                        raise Exception(proc.stderr or proc.stdout)
+                        else: raise Exception(output.get('error'))
+                    else: raise Exception(proc.stderr or proc.stdout)
             
             if result is not None: break
         except Exception as e:

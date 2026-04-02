@@ -29,13 +29,11 @@ def is_valid_hash(h: str) -> bool:
     try:
         int(h, 16)
         return True
-    except ValueError:
-        return False
+    except ValueError: return False
 
 # --- Storage Adapter (The Substrate Abstraction) ---
 
 class VaultAdapter:
-    """Consolidates all filesystem I/O for the Linker."""
     def __init__(self, vault_dir: str = "blob_vault", collective_dir: str = "collective_vault"):
         self.vault_dir = Path(vault_dir)
         self.collective_dir = Path(collective_dir)
@@ -45,19 +43,15 @@ class VaultAdapter:
         self.proposals_dir = self.vault_dir / "proposals"
         self.signatures_dir = self.vault_dir / "signatures"
         self.index_file = self.vault_dir / "semantic_index.json"
-        
         for d in [self.vault_dir, self.telemetry_dir, self.cognitive_dir, self.state_dir, self.proposals_dir, self.signatures_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
     def read(self, h: str, is_bios: bool = False) -> str:
-        """Reads a blob by hash with a BIOS fallback."""
         path = self.vault_dir / h
-        if not path.exists() or not path.is_file():
-            raise FileNotFoundError(f"Blob {h} not found.")
+        if not path.exists() or not path.is_file(): raise FileNotFoundError(f"Blob {h} not found.")
         with open(path, 'r') as f: return f.read()
 
     def write(self, data: str, type_hint: str = "generic") -> str:
-        """Writes an immutable blob and returns its hash."""
         h = hashlib.sha256(data.encode()).hexdigest()
         path = self.vault_dir / h
         with open(path, 'w') as f: f.write(data)
@@ -71,20 +65,15 @@ class VaultAdapter:
         with open("manifest.hash", "w") as f: f.write(h)
 
     def get_state(self, state_id: str) -> dict:
-        """Syncs state from collective, then local."""
         coll_path = self.collective_dir / "state" / str(state_id)
         local_path = self.state_dir / str(state_id)
-        
-        # Try collective sync first
         if coll_path.exists():
             with open(coll_path, 'r') as f: h = f.read().strip()
             try:
                 state_data = json.loads(self.read(h))
-                # Update local cache
                 with open(local_path, 'w') as f: f.write(h)
                 return state_data
             except: pass
-            
         if local_path.exists():
             with open(local_path, 'r') as f: h = f.read().strip()
             try: return json.loads(self.read(h))
@@ -93,21 +82,9 @@ class VaultAdapter:
 
     def put_state(self, state_id: str, state: dict):
         h = self.write(json.dumps(state))
-        # Push to both local and collective
         for d in [self.state_dir, self.collective_dir / "state"]:
             d.mkdir(parents=True, exist_ok=True)
             with open(d / str(state_id), 'w') as f: f.write(h)
-
-    def list_artifacts(self, category: str = "cognitive", count: int = 10) -> list:
-        d = self.cognitive_dir if category == "cognitive" else self.telemetry_dir
-        files = sorted(list(d.glob("*")), key=os.path.getmtime)
-        results = []
-        for f in files[-count:]:
-            try:
-                h = f.read_text().strip() if f.is_file() else None
-                if h: results.append(json.loads(self.read(h)))
-            except: continue
-        return results
 
     def index_get(self) -> dict:
         if not self.index_file.exists(): return {}
@@ -127,7 +104,6 @@ class Linker:
         res = f"Simulated reasoning for: {prompt[:50]}..."
         artifact = {"type": "cognitive_artifact", "prompt": prompt, "response": res, "latency": time.perf_counter() - start_t, "timestamp": time.time()}
         h = self.adapter.write(json.dumps(artifact))
-        # Log to cognitive vault
         with open(self.adapter.cognitive_dir / h, 'w') as f: f.write(h)
         return res
 
@@ -162,44 +138,57 @@ class Linker:
         root_h = self.adapter.get_manifest_hash()
         if not root_h: return None
         try:
-            manifest_data = self.adapter.read(root_h)
-            manifest = json.loads(manifest_data)
+            manifest = json.loads(self.adapter.read(root_h))
             return manifest.get("capabilities", {}).get(name, {}).get(version)
-        except (json.JSONDecodeError, FileNotFoundError):
-            return None
+        except: return None
+
+    def list_capabilities(self) -> list:
+        root_h = self.adapter.get_manifest_hash()
+        if not root_h: return []
+        try:
+            manifest = json.loads(self.adapter.read(root_h))
+            return list(manifest.get("capabilities", {}).keys())
+        except: return []
+
+    def invoke_capability(self, name: str, context: dict = None, version: str = "stable") -> dict:
+        h = self.resolve_capability(name, version)
+        if not h: return {"result": None, "status": "failure", "error": f"Capability not found: {name}"}
+        return self.invoke(h, context)
 
     def invoke(self, h: str, context: dict = None) -> dict:
-        if not is_valid_hash(h):
-            return {"result": None, "status": "failure", "error": f"Invalid SHA-256 Hash provided: {h}"}
-        
+        if not is_valid_hash(h): return {"result": None, "status": "failure", "error": f"Invalid SHA-256 Hash provided: {h}"}
         start_time = time.perf_counter()
         context = context or {}
         logs = []
         def log(msg): logs.append(f"[{time.time()}] {msg}")
+
+        primitives = {
+            "inference": self.inference, "embed": self.embed, "rerank": self.rerank,
+            "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities,
+            "invoke_capability": self.invoke_capability, "put": self.adapter.write, "propose": self.propose
+        }
 
         # 1. Proxy
         proxy_h = self.resolve_capability("proxy")
         request_envelope = context
         if proxy_h and h != proxy_h:
             try:
-                # Structural layers get full builtins
-                scope = {"context": {"request": context, "timestamp": time.time(), "trace_id": "syn-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]}, "log": log, "result": None, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed}
+                scope = {"context": {"request": context, "timestamp": time.time(), "trace_id": "syn-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]}, "log": log, "result": None, "__builtins__": __builtins__, "SAFE_BUILTINS": SAFE_BUILTINS}
+                scope.update(primitives)
                 exec(self.adapter.read(proxy_h), scope, scope)
                 request_envelope = scope.get("result", request_envelope)
-            except Exception as e:
-                log(f"Proxy Error: {str(e)}")
+            except Exception as e: log(f"Proxy Error: {str(e)}")
 
         # 2. Broker
         execution_plan = {"method": "local_exec", "sandbox": "standard"}
         broker_h = self.resolve_capability("broker")
         if broker_h and h != broker_h:
             try:
-                # Structural layers get full builtins
-                scope = {"context": {"target": h, "request": request_envelope}, "log": log, "result": None, "os": os, "glob": glob, "json": json, "hashlib": hashlib, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "rerank": self.rerank, "put": self.adapter.write, "propose": self.propose}
+                scope = {"context": {"target": h, "request": request_envelope}, "log": log, "result": None, "os": os, "glob": glob, "json": json, "hashlib": hashlib, "__builtins__": __builtins__, "SAFE_BUILTINS": SAFE_BUILTINS}
+                scope.update(primitives)
                 exec(self.adapter.read(broker_h), scope, scope)
                 if scope.get("result"): execution_plan = scope["result"]
-            except Exception as e:
-                log(f"Broker Error: {str(e)}")
+            except Exception as e: log(f"Broker Error: {str(e)}")
 
         # 3. State
         state_id = request_envelope.get("params", {}).get("state_id")
@@ -210,88 +199,64 @@ class Linker:
             payload = self.adapter.read(h)
             engine_h = self.resolve_capability("engine")
             if engine_h and h != engine_h:
-                # Structural layers get full builtins
-                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "SAFE_BUILTINS": SAFE_BUILTINS}
+                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "SAFE_BUILTINS": SAFE_BUILTINS}
+                scope.update(primitives)
                 exec(self.adapter.read(engine_h), scope, scope)
                 result = scope.get("result")
                 state = scope.get("context", {}).get("state", state)
             else:
-                # Direct execution uses sandbox
-                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS, "inference": self.inference, "embed": self.embed}
+                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS}
+                scope.update(primitives)
                 exec(payload, scope, scope)
                 result = scope.get("result")
                 state = scope.get("state", state)
             
             if result is None: raise ValueError("ABI Violation: No result assigned.")
             if state_id: self.adapter.put_state(state_id, state)
-            status = "success"
-            error = None
-        except Exception as e:
-            status = "failure"
-            error = str(e)
-            result = None
+            status = "success"; error = None
+        except Exception as e: status = "failure"; error = str(e); result = None
 
         telemetry = {"blob_hash": h, "request_envelope": request_envelope, "execution_plan": execution_plan, "status": status, "latency": time.perf_counter() - start_time, "logs": logs, "error": error, "timestamp": time.time()}
         self.adapter.write(json.dumps(telemetry))
         return {"result": result, "status": status, "error": error}
 
 def main():
-    adapter = VaultAdapter()
-    linker = Linker(adapter)
-    
-    if len(sys.argv) < 2:
-        print("Usage: seed.py <command> [args]")
-        sys.exit(1)
-
+    adapter = VaultAdapter(); linker = Linker(adapter)
+    if len(sys.argv) < 2: print("Usage: seed.py <command> [args]"); sys.exit(1)
     cmd = sys.argv[1]
-    if cmd == "put":
-        payload = Path(sys.argv[2]).read_text() if os.path.exists(sys.argv[2]) else sys.argv[2]
-        print(adapter.write(payload))
+    if cmd == "put": print(adapter.write(Path(sys.argv[2]).read_text() if os.path.exists(sys.argv[2]) else sys.argv[2]))
     elif cmd == "index":
         idx = adapter.index_get()
         idx[sys.argv[2]] = {"hash": sys.argv[2], "description": sys.argv[3], "vector": linker.embed(sys.argv[3])}
-        adapter.index_put(idx)
-        print(f"Indexed: {sys.argv[2]}")
-    elif cmd == "sign":
-        print(f"Signed {sys.argv[2]}: {linker.sign(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'local-node')}")
+        adapter.index_put(idx); print(f"Indexed: {sys.argv[2]}")
+    elif cmd == "sign": print(f"Signed {sys.argv[2]}: {linker.sign(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'local-node')}")
     elif cmd == "governance":
         jury_h = linker.resolve_capability("jury")
         if not jury_h: print("Error: No Jury capability"); sys.exit(1)
-        # Simplified internal jury call for CLI
         scope = {"context": {"proposal_id": sys.argv[2]}, "log": lambda m: None, "result": None, "inference": linker.inference, "sign": linker.sign, "tally": linker.tally, "_raw_get": adapter.read, "json": json, "os": os, "__builtins__": __builtins__}
-        exec(adapter.read(jury_h), scope, scope)
-        print(json.dumps(scope.get("result"), indent=2))
-    elif cmd == "tally":
-        print(f"Signatures for {sys.argv[2]}: {linker.tally(sys.argv[2])}")
-    elif cmd == "invoke":
-        print(json.dumps(linker.invoke(sys.argv[2], json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}), indent=2))
+        exec(adapter.read(jury_h), scope, scope); print(json.dumps(scope.get("result"), indent=2))
+    elif cmd == "tally": print(f"Signatures for {sys.argv[2]}: {linker.tally(sys.argv[2])}")
+    elif cmd == "invoke": print(json.dumps(linker.invoke(sys.argv[2], json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}), indent=2))
     elif cmd == "mcp":
         for line in sys.stdin:
             try:
-                req = json.loads(line)
-                m, p, rid = req.get("method"), req.get("params", {}), req.get("id")
+                req = json.loads(line); m, p, rid = req.get("method"), req.get("params", {}), req.get("id")
                 if m == "tools/list":
                     manifest = json.loads(adapter.read(adapter.get_manifest_hash()))
                     res = {"jsonrpc": "2.0", "id": rid, "result": {"tools": [{"name": k, "versions": list(v.keys())} for k, v in manifest.get("capabilities", {}).items()]}}
-                elif m == "tools/call":
-                    res = {"jsonrpc": "2.0", "id": rid, "result": linker.invoke(p.get("name"), {"params": p.get("arguments", {}), "intent": "mcp_call"})}
+                elif m == "tools/call": res = {"jsonrpc": "2.0", "id": rid, "result": linker.invoke(p.get("name"), {"params": p.get("arguments", {}), "intent": "mcp_call"})}
                 else: res = {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": "Method not found"}}
                 print(json.dumps(res), flush=True)
             except Exception as e: print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": str(e)}}), flush=True)
     elif cmd == "promote":
-        prop_id = sys.argv[2]
-        min_sigs = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+        prop_id = sys.argv[2]; min_sigs = int(sys.argv[3]) if len(sys.argv) > 3 else 0
         prop_path = adapter.proposals_dir / prop_id
-        if not prop_path.exists():
-            manifest = json.loads(Path(sys.argv[2]).read_text())
+        if not prop_path.exists(): manifest = json.loads(Path(sys.argv[2]).read_text())
         else:
-            if linker.tally(prop_id) < min_sigs:
-                print(f"FAILED: Consensus not reached for {prop_id}"); sys.exit(1)
+            if linker.tally(prop_id) < min_sigs: print(f"FAILED: Consensus not reached for {prop_id}"); sys.exit(1)
             manifest = json.loads(prop_path.read_text())
         for name, versions in manifest.get("capabilities", {}).items():
             for ver, h in versions.items(): adapter.read(h)
-        h = adapter.write(json.dumps(manifest))
-        adapter.update_manifest_hash(h)
-        print(f"Successfully promoted: {h}")
+        h = adapter.write(json.dumps(manifest)); adapter.update_manifest_hash(h); print(f"Successfully promoted: {h}")
 
 if __name__ == "__main__": main()
