@@ -3,6 +3,7 @@
 **Status:** Proposed
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
+**Note:** The SHA-256 vault address specified here is superseded by ADR-001 (blake3 as canonical hash). The implementation still uses SHA-256 pending the migration tracked in ADR-001.
 
 ## Context
 
