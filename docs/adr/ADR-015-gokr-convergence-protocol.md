@@ -112,6 +112,13 @@ carries more weight in convergence.
         "resolution": "<chosen direction and why, or 'unresolved'>"
       }
     ],
+    "overrules": [
+      {
+        "prior_synthesis_hash": "<hash of synthesis/gokr being overruled>",
+        "overruled_convergence_point": "<exact text of the prior convergence point>",
+        "reason": "<why the prior consensus no longer holds>"
+      }
+    ],
     "next_gokr": {
       "objective": "<refined objective for next cycle>",
       "key_results": [],
@@ -120,6 +127,13 @@ carries more weight in convergence.
   }
 }
 ```
+
+`overrules` is optional and normally empty. When a synthesis explicitly contradicts a
+`convergence_point` from a prior synthesis, it must name the prior synthesis hash and
+the overruled point. A non-empty `overrules` field triggers heavier governance
+requirements for the resulting `goal/gokr` promotion (quorum required, not threshold).
+This is the system's equivalent of overruling precedent — permitted, but it must leave
+a traceable record and requires broader consensus than ordinary evolution.
 
 A `synthesis/gokr` blob is the input to the next `goal/gokr`. The synthesizer produces
 a `next_gokr` payload; a governed promotion mints the next `goal/gokr` blob from it.
