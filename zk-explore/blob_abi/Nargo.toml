@@ -1,0 +1,6 @@
+[package]
+name = "blob_abi"
+type = "bin"
+authors = [""]
+
+[dependencies]
