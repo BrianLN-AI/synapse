@@ -58,6 +58,8 @@ Two parallel experiment lineages evolve from the same shared base:
                                    [tag: v1.9.0]          f_9 = f_8(f_8)
                                    [tag: v1.10.0]         f_10 = f_9(f_9)
                                    [tag: v1.11.0]         f_11 = f_10(f_10)
+                                   [tag: v1.12.0]         f_12 = f_11(f_11)
+                                   [tag: v1.13.0]         f_13 = f_12(f_12)
 ```
 
 > **No experiment code lives on `main` yet.** `main` is stable docs and pointers only.
@@ -79,15 +81,15 @@ Started from `undefined` directly, without a governance layer. A solo agent buil
 
 Started from a distinct genesis commit (`f(0)`) and immediately introduced `COUNCIL.md` — a collective intelligence governance protocol. Every release milestone is an annotated tag with a tagger identity and a release summary.
 
-- **Branches:** `council/f_0` through `council/f_12`
-- **Tags (annotated):** `v1.0.0` through `v1.12.0`
+- **Branches:** `council/f_0` through `council/f_13`
+- **Tags (annotated):** `v1.0.0` through `v1.13.0`
 - **Self-modification identity:** `f_n = f_{n-1}(f_{n-1})` — each cycle uses the previous version to produce the next
 
 > Note: `council/f_0` is a **branch name** (git uses `/` in names); it is not a directory.
 
 ### Current Status
 
-**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). Latest stable council release: **v1.12.0** (`council/f_12`). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
+**No merges back to `main` yet** — the experiments are still evolving. `main` is intentionally kept as a stable entry point (docs + pointers only). Latest stable council release: **v1.13.0** (`council/f_13`). See [docs/experiments.md](docs/experiments.md) for lineage details and tag notes, and [docs/providence.md](docs/providence.md) for the provenance model and tagging conventions.
 
 ---
 
@@ -252,6 +254,8 @@ Synapse tracks its evolutionary lineage using **git branches as iterations** and
 | `council/f_9` (tag: `v1.9.0`) | `f_9 = f_8(f_8)` | Adversarial test authorship (two-model pipeline: gemini-flash implementor, devstral tester; test/case blobs, test suite gate) |
 | `council/f_10` (tag: `v1.10.0`) | `f_10 = f_9(f_9)` | Guided mutation goals from audit log trends + multi-candidate N=3 + dropped deterministic fallback |
 | `council/f_11` (tag: `v1.11.0`) | `f_11 = f_10(f_10)` | Goal/OKR blob type + capability bootstrap + GOKR execution engine; run_all() discovers labels dynamically |
+| `council/f_12` (tag: `v1.12.0`) | `f_12 = f_11(f_11)` | blake3 as canonical vault and manifest hash function; multihash address format foundation (ADR-015) |
+| `council/f_13` (tag: `v1.13.0`) | `f_13 = f_12(f_12)` | Engine-as-expression: seed.py collapses to kernel; all execution policy (bytecode cache, telemetry, ABI) moves into a promotable engine expression stored in the vault |
 
 See [docs/experiments.md](docs/experiments.md) for the full lineage histories and tag notes.
 
@@ -349,7 +353,7 @@ python seed.py promote manifest.json
 
 ## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-02 20:41 UTC
+**Last updated:** 2026-04-02
 
 ### Branches
 - `copilot/update-documentation-experiment-lineages`
@@ -358,6 +362,7 @@ python seed.py promote manifest.json
 - `council/f_10`
 - `council/f_11`
 - `council/f_12`
+- `council/f_13`
 - `council/f_2`
 - `council/f_3`
 - `council/f_4`
@@ -377,10 +382,10 @@ python seed.py promote manifest.json
 - `f_6`
 - `f_7`
 - `f_8`
-- `f_9`
 - `main`
 
 ### Tags
+- `v1.13.0`
 - `v1.12.0`
 - `v1.11.0`
 - `v1.10.0`
@@ -396,8 +401,6 @@ python seed.py promote manifest.json
 - `v1.0.0`
 - `unknown`
 - `undefined`
-- `f_9`
-- `f_8`
 - `f_7`
 - `f_6`
 - `f_4`
