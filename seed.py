@@ -142,6 +142,8 @@ class Linker:
         except: return None
 
     def invoke(self, h: str, context: dict = None) -> dict:
+        if not h or not isinstance(h, str):
+            return {"result": None, "status": "failure", "error": "Invalid or empty Blob Hash provided."}
         start_time = time.perf_counter()
         context = context or {}
         logs = []
