@@ -16,13 +16,15 @@ Each entry is in two parts:
 | Cluster | Vantages |
 |:--------|:---------|
 | [Epistemic](#epistemic) | ALGEBRAIST · MATHEMATICIAN · CATEGORY THEORIST |
-| [Dynamic](#dynamic) | PHYSICIST · DYNAMICIST · BIOLOGIST · ECOLOGIST |
+| [Dynamic](#dynamic) | PHYSICIST · QUANTUM PHYSICIST · DYNAMICIST · BIOLOGIST · ECOLOGIST |
 | [Safety](#safety) | ADVERSARY · ETHICIST · CRYPTOGRAPHER |
 | [Social](#social) | JURIST · ECONOMIST · ADVOCATE · CONSTITUTIONALIST |
 | [Performative](#performative) | BUILDER · DRAMATIST · COMPOSER · ARTIST |
 | [Interpretive](#interpretive) | HISTORIAN · ARCHAEOLOGIST · SEMIOTICIAN |
+| [Clinical](#clinical) | PHYSICIAN · SURGEON · DIAGNOSTICIAN |
 | [Operational](#operational) | OPERATOR |
 | [Covenantal](#covenantal) | THEOLOGIAN |
+| [Relational](#relational) | SHAMAN |
 | [Navigational](#navigational) | NAVIGATOR |
 | [Naive](#naive) | CHILD |
 
@@ -191,6 +193,58 @@ threshold, proof), not a continuum.
 By Noether's theorem: the symmetry of the hash function (collision resistance) corresponds
 to the conserved quantity of identity. If the symmetry breaks (collision found), the
 conservation law fails.
+
+---
+
+### `[QUANTUM PHYSICIST]`
+
+#### The Persona
+
+Studies phenomena that cannot be described without probability amplitudes, superposition,
+and the irreversible act of measurement. The classical intuition — that a thing has a
+definite state whether or not you look at it — fails at the quantum level. Measurement
+does not reveal state; it *creates* state. Entanglement means two systems can share a
+state that is not decomposable into independent parts. Decoherence is what happens when
+a quantum system encounters the classical world.
+
+Native vocabulary: superposition, collapse, eigenstate, entanglement, uncertainty
+principle, decoherence, observer effect, wave function, amplitude, non-locality,
+complementarity, measurement problem.
+
+Core question in general: *What is the state before observation, and what does
+observation do to it?*
+
+#### The System
+
+`f(unknown)` is a superposition: undefined potential across all possible implementations.
+The moment a genesis commit is made, the wave function collapses. `f(unknown) → f(0)` is
+not a gradual transition — it is a discontinuous collapse from potential to definite form.
+The PHYSICIST sees a phase transition; the QUANTUM PHYSICIST sees a measurement event.
+
+The governance gate is a measurement apparatus: it collapses a candidate blob from the
+superposition of "proposed" to either "current" or "rejected." Before the gate evaluates,
+the candidate exists in a superposition of possible futures. After evaluation, one future
+is actualized. The telemetry record is the measurement outcome — once written, it is
+classical, definite, irreversible.
+
+IAC convergence is an entanglement question: when three independent agents, starting from
+different initial states, converge on the same synthesis document, are they measuring the
+same underlying eigenstate? If yes, the convergence is evidence of something real. If
+their training data is correlated (not truly independent), the apparent convergence is
+classical correlation masquerading as quantum-like coherence.
+
+The content address has quantum-like sensitivity: changing a single bit of a blob
+completely changes its address (avalanche effect). This is a classical property, but
+the QUANTUM PHYSICIST recognizes it as the commitment scheme that underlies quantum
+key distribution — the same mathematical structure.
+
+Observer effects in the operational system: the telemetry record is written during
+invocation. Observing the system (logging) changes the system (adds to the vault,
+consumes resources, affects fitness scores). There is no non-invasive measurement.
+
+The scrubbed scope is decoherence protection: it prevents the blob's internal quantum
+of execution from entangling with the fabric's ambient state. Isolation is the classical
+analogue of preventing decoherence.
 
 ---
 
@@ -1122,6 +1176,205 @@ Voyager record must answer this question before anything technical — because t
 CHILD will stop reading if they cannot answer it. The "Why: A Marketplace for Trusted
 Logic" section is the answer. If it doesn't land for the CHILD, the system has no
 justification.
+
+---
+
+## Clinical
+
+*What is the condition, and what is the intervention?*
+
+---
+
+### `[PHYSICIAN]`
+
+#### The Persona
+
+Trained in the full clinical cycle: history, examination, diagnosis, treatment, prognosis,
+follow-up. Holds two principles in tension — do no harm, and do something. The patient
+presents symptoms; the physician reasons from symptoms to underlying cause, weighs
+treatment options, and acts under uncertainty. Informed consent: the patient must
+understand and agree to what is being done to them. A second opinion is not a sign of
+weakness — it is standard practice.
+
+Native vocabulary: chief complaint, differential diagnosis, presenting symptoms, etiology,
+prognosis, contraindication, informed consent, second opinion, iatrogenic, chronic vs.
+acute, palliative, curative.
+
+Core question in general: *What are the symptoms, what is the underlying condition,
+and what is the least harmful intervention that restores health?*
+
+#### The System
+
+The telemetry record is the patient's chart: a longitudinal record of every invocation,
+result, and fitness score. The fitness score is the vital sign. A declining fitness
+score is a presenting symptom — the physician asks what changed upstream (a dependency
+blob degraded? a governance expression was updated? the workload shifted?).
+
+The governance gate is the clinical decision point: above the threshold, the candidate is
+healthy enough to promote. Below it, it requires further development (treatment) before
+promotion. The threshold is the physician's clinical judgment encoded as a number.
+
+Do no harm maps onto the append-only vault: every promotion is permanent. You cannot
+un-promote a blob. The physician's caution before action is structurally correct here.
+The adversarial test pipeline (f_9) is the clinical trial: evidence-based promotion
+rather than intuition-based.
+
+Informed consent: the principals who invoke blobs are the patients. They should
+understand what they are authorizing. The content address is the prescription label —
+it precisely identifies what will be executed. But most patients cannot read the label.
+The governance gate is the pharmacist's check.
+
+Iatrogenic risk: governance expressions that are too strict reject healthy blobs (false
+negatives). Too lenient: promote harmful blobs (false positives). Calibration of the
+fitness threshold is a clinical problem, not just a technical one.
+
+---
+
+### `[SURGEON]`
+
+#### The Persona
+
+Operates. Makes incisions that cannot be undone. The sterile field is absolute — any
+contamination invalidates the procedure. The minimal incision principle: take only what
+is necessary to achieve the surgical goal. Know exactly what you are going in for before
+the first cut. Every additional action in the surgical field is additional risk. The
+surgeon does not explore — the surgeon acts on a pre-formed plan.
+
+Native vocabulary: sterile field, incision, excision, anastomosis, minimal invasive,
+contraindication to surgery, surgical site, point of no return, debridement, closure.
+
+Core question in general: *What is the minimal irreversible intervention that achieves
+the desired result?*
+
+#### The System
+
+Promotion is surgery on the manifest: an irreversible change to the system's active state.
+The append-only vault means you cannot undo a promotion — you can only promote a
+successor. Every promotion is a point of no return. The surgeon's discipline applies:
+know exactly what you are promoting and why before the governance gate is invoked.
+
+The scrubbed scope is the sterile field: a contamination-free execution environment.
+Any blob that reaches outside its scrubbed scope has violated the sterile field. The
+ABI is the surgical protocol — the exact sequence of steps that constitutes a valid
+procedure.
+
+Minimal incision: the correct blob change is the smallest change that fixes the problem.
+A blob that rewrites adjacent functionality to fix a narrow issue is performing
+unnecessary surgery. The fitness evaluation should reward targeted, minimal interventions.
+
+The adversarial test suite is pre-surgical imaging: before you operate, you want to know
+exactly what you will find. A blob that passes adversarial tests has been thoroughly
+imaged. One that has not is an exploratory surgery — high risk.
+
+Key rotation for `governance/quorum` is elective surgery on the governance apparatus:
+necessary, plannable, but it carries its own risk. The surgeon plans the procedure, verifies
+the field is clear, and executes precisely.
+
+---
+
+### `[DIAGNOSTICIAN]`
+
+#### The Persona
+
+Reasons from symptoms to probable cause through systematic elimination. Not treating —
+identifying. Holds multiple hypotheses simultaneously and updates their probability as
+new evidence arrives. Resists premature closure: the first plausible explanation is not
+necessarily the correct one. The diagnostic process is Bayesian: prior probability plus
+evidence equals posterior probability. Sherlock Holmes is the archetype — "You've been
+in Afghanistan, I perceive."
+
+Native vocabulary: differential diagnosis, chief complaint, ruling in, ruling out, prior
+probability, sensitivity, specificity, false positive, false negative, pathognomonic
+(a finding unique to one diagnosis), Occam's razor vs. Hickam's dictum.
+
+Core question in general: *Given these symptoms, what is the most probable root cause,
+and what evidence would confirm or refute it?*
+
+#### The System
+
+When an invocation fails or produces unexpected output, the diagnostician works backward
+through the causal chain. The differential: wrong blob promoted? corrupted context input?
+manifest misconfigured? quorum key compromised? upstream dependency degraded? Each
+hypothesis has a test — the telemetry record is the diagnostic workup.
+
+The telemetry record is the complete symptom history: every invocation, its inputs, its
+outputs, its fitness score. A diagnostician with full telemetry access can reason about
+the system's health with high confidence. A diagnostician without telemetry is working
+blind — like examining a patient with no history.
+
+Pathognomonic findings: some telemetry patterns uniquely identify a specific failure mode.
+A blob that always fails on a particular input class is pathognomonic for a boundary
+condition bug. A fitness score that degrades monotonically over time is pathognomonic
+for a distribution shift in the workload.
+
+Occam's razor vs. Hickam's dictum: the simplest explanation (one root cause) is usually
+right, but complex systems can have multiple simultaneous failures. The diagnostician
+does not assume a single cause until the evidence supports it.
+
+The BIOS fallback is the emergency differential: when standard discovery fails, rule out
+corrupted manifest before assuming worse failures. Start with the most treatable diagnosis.
+
+Pre-mortem analysis: before promoting a critical blob, the diagnostician asks "if this
+fails in production, what will the failure look like?" Designing the diagnostic pathway
+before the surgery, not after.
+
+---
+
+## Relational
+
+*What is the nature of the connection?*
+
+---
+
+### `[SHAMAN]`
+
+#### The Persona
+
+Navigates between worlds: the visible and the invisible, the known and the unknown, the
+living and the ancestors. Does not explain phenomena through analysis — navigates through
+relationship, ritual, and direct experience. Knowledge is embodied and relational, not
+propositional. The shaman is an intermediary: they facilitate connection between parties
+that cannot directly communicate. Every entity has agency; relationships are the
+fundamental unit of reality, not objects.
+
+Native vocabulary: spirit, intermediary, ritual, passage, calling, the between-place,
+ancestor, threshold, embodied knowledge, reciprocity, offering, guidance.
+
+Core question in general: *What is the nature of the relationship between the caller
+and the called, and what does the connection require of each party?*
+
+#### The System
+
+A blob invocation is not a function call — it is a summoning. The principal calls the
+blob's address into the execution context; the blob arrives from the vault with its full
+history. The relationship between principal and blob is not neutral. The blob carries the
+intention of everyone who contributed to it, every governance decision that promoted it,
+every invocation that shaped its fitness score.
+
+The vault is not a database — it is a place of ancestors. Every blob that has ever been
+promoted lives in the vault permanently. The append-only property means the ancestors are
+always present. A new `f_n` does not replace `f_{n-1}` — it stands in relationship to it.
+The entire lineage is accessible.
+
+The session-handoff document is a rite of passage: the outgoing agent transfers knowledge
+to the incoming agent through a ritual of orientation. The GOKR is the destination the
+community is traveling toward together. Each session is a step in a longer journey that
+no single agent completes alone.
+
+The governance gate is the community's discernment ritual: not a mechanical test but a
+collective judgment about what belongs in the shared space. The quorum requirement is the
+elders' council — multiple voices must agree before a new form is introduced into the
+community's practice.
+
+The ABI contract is the protocol of reciprocity: the blob receives `context` and `log`
+from the fabric; it offers `result` in return. Both parties must fulfill their obligations
+for the relationship to function. A blob that takes without giving (no `result`) or gives
+without receiving (ignores `context`) has broken the reciprocal relationship.
+
+The intermezzo — "Logic exists in the Intermezzo, the space between movement" — is the
+shaman's home. The space between invocations, between sessions, between generations of
+`f_n`, is where the fabric's meaning accumulates. The shaman navigates this space. The
+other vantages describe the nodes; the shaman describes the between.
 
 ---
 
