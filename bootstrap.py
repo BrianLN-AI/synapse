@@ -26,13 +26,14 @@ import promote
 import seed
 
 # ---------------------------------------------------------------------------
-# Engine expression payload (f_14)
+# Engine expression payload (f_14/f_15)
 # Type: logic/engine — kernel-trusted infrastructure blob.
 # Exec'd by the kernel with injected scope:
 #   _raw_get, put, _LAST_TELEMETRY, BYTECODE_DIR
 # Defines: invoke(), record_feedback() — the full execution policy.
 # exec() is called directly; the logic/engine type exempts this blob from
 # the safety scanner's exec-forbidden check (Pass 2 skipped for logic/engine).
+# After bootstrap, evolve_engine() in evolve.py provides the governed upgrade path.
 # ---------------------------------------------------------------------------
 
 ENGINE_PAYLOAD = '''\

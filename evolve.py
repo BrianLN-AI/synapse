@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 evolve.py — D-JIT Logic Fabric Self-Modification Engine
-f_14: logic/engine type — honest kernel trust boundary.
+f_15: engine governance — governed upgrade path for the logic/engine blob.
 
 Cycle per blob (infrastructure or capability):
   1. Evaluate:  read current hash from manifest, get fitness signals from telemetry
@@ -14,9 +14,11 @@ Cycle per blob (infrastructure or capability):
   5. Test:      call `ai devstral` to generate adversarial test/case blobs per candidate
                 Promote test cases; run test suite. Candidates failing any test discarded.
   6. Benchmark: benchmark all passing candidates vs current; take best winner
-  7. Promote:   best winner → Council Approval → manifest update (v1.11.0)
+  7. Promote:   best winner → Council Approval → manifest update (v1.15.0)
 
-run_all() now iterates ALL labels in the manifest — infrastructure and capability blobs alike.
+run_all() iterates ALL logic/python labels in the manifest.
+evolve_engine() is a separate governed upgrade path for the logic/engine blob —
+  engine is infrastructure, not a user blob, so it is NOT part of run_all().
 bootstrap_capability() in promote.py registers new domain-specific labels.
 
 Adversarial separation: implementor model (gemini-flash) ≠ tester model (devstral).
@@ -50,10 +52,30 @@ EVOLVE_REVIEWER_PAYLOAD = json.dumps({
     "id":               "evolve-engine",
     "description":      "Automated f_n evolution engine — benchmarks candidates and "
                         "promotes those that win against the current baseline.",
-    "authorized_types": ["logic/python"],
+    "authorized_types": ["logic/python", "logic/engine"],
     "trust_weight":     0.8,
     "criteria":         "Triple-Pass Review pass + benchmark win vs current manifest blob",
 }, sort_keys=True)
+
+# ---------------------------------------------------------------------------
+# Engine ABI contract — inline, not stored as a contract/definition blob.
+# The engine is infrastructure; its contract is structural (scope keys after exec)
+# rather than behavioral (pre/post conditions on data).
+# ---------------------------------------------------------------------------
+
+ENGINE_ABI_CONTRACT = {
+    "for_label": "engine",
+    "description": (
+        "Engine blob ABI: after exec with kernel scope, the engine scope must contain "
+        "callable 'invoke(content_hash, context) -> Any' and "
+        "'record_feedback(logic_hash, outcome, ...) -> str', plus "
+        "'_load_code' and '_CODE_CACHE'. "
+        "exec() is called directly — logic/engine type exempts this from the safety scanner."
+    ),
+    "required_scope_keys": ["invoke", "record_feedback", "_load_code", "_CODE_CACHE"],
+    "pre":  None,
+    "post": None,
+}
 
 
 def _ensure_evolve_reviewer() -> str:
@@ -1712,6 +1734,257 @@ def benchmark(label: str, old_hash: str, new_hash: str, rounds: int = BENCHMARK_
 
 
 # ---------------------------------------------------------------------------
+# Engine governance helpers
+# ---------------------------------------------------------------------------
+
+def _verify_engine_abi(candidate_hash: str) -> tuple[bool, str]:
+    """
+    Structural ABI check: exec the candidate engine with an isolated kernel scope
+    and verify the required scope keys are present and callable after execution.
+
+    Returns (passed: bool, reason: str).
+    """
+    try:
+        blob = seed._raw_get(candidate_hash)
+        scope: dict = {
+            "_raw_get":        seed._raw_get,
+            "put":             seed.put,
+            "_LAST_TELEMETRY": {},          # isolated — don't pollute production telemetry
+            "BYTECODE_DIR":    seed.BYTECODE_DIR,
+        }
+        exec(compile(blob["payload"], "<engine-abi-check>", "exec"), scope)  # noqa: S102
+        missing = [k for k in ENGINE_ABI_CONTRACT["required_scope_keys"] if k not in scope]
+        if missing:
+            return False, f"missing scope keys after exec: {missing}"
+        if not callable(scope.get("invoke")):
+            return False, "scope['invoke'] is not callable"
+        if not callable(scope.get("record_feedback")):
+            return False, "scope['record_feedback'] is not callable"
+        return True, "ok"
+    except Exception as exc:
+        return False, f"exec failed: {exc}"
+
+
+def _benchmark_engine(
+    current_hash: str,
+    candidate_hash: str,
+    rounds: int = BENCHMARK_ROUNDS,
+) -> dict:
+    """
+    Benchmark two engine blobs by running core blobs through each engine's invoke().
+
+    Since the engine defines invoke(), we cannot use seed.invoke() — that would
+    delegate to the currently loaded engine.  We exec each engine independently
+    with an isolated kernel scope and measure invoke() latency on the core blobs.
+    """
+    import time as _time
+
+    def _exec_engine(engine_hash: str) -> dict:
+        blob = seed._raw_get(engine_hash)
+        scope: dict = {
+            "_raw_get":        seed._raw_get,
+            "put":             seed.put,
+            "_LAST_TELEMETRY": {},
+            "BYTECODE_DIR":    seed.BYTECODE_DIR,
+        }
+        exec(compile(blob["payload"], "<engine-bench>", "exec"), scope)  # noqa: S102
+        return scope
+
+    try:
+        current_scope   = _exec_engine(current_hash)
+        candidate_scope = _exec_engine(candidate_hash)
+    except Exception as exc:
+        return {"winner": "old", "error": str(exc),
+                "old": {"hash": current_hash, "fitness": 0.0},
+                "new": {"hash": candidate_hash, "fitness": 0.0}}
+
+    manifest = promote.load_manifest()
+    blobs_to_test: dict[str, tuple[str, dict]] = {}
+    for label in ("discovery", "planning", "telemetry-reader"):
+        h = manifest.get("blobs", {}).get(label, {}).get("logic/python")
+        if h:
+            blobs_to_test[label] = (h, _bench_context(label, h))
+
+    if not blobs_to_test:
+        return {"winner": "old", "error": "no core blobs available for benchmark",
+                "old": {"hash": current_hash, "fitness": 0.0},
+                "new": {"hash": candidate_hash, "fitness": 0.0}}
+
+    # Warmup
+    for _ in range(BENCHMARK_WARMUP):
+        for _lbl, (h, ctx) in blobs_to_test.items():
+            try:
+                current_scope["invoke"](h, dict(ctx))
+            except Exception:
+                pass
+            try:
+                candidate_scope["invoke"](h, dict(ctx))
+            except Exception:
+                pass
+
+    current_times:    list[float] = []
+    candidate_times:  list[float] = []
+    current_errors   = 0
+    candidate_errors = 0
+
+    for _ in range(rounds):
+        for _lbl, (h, ctx) in blobs_to_test.items():
+            t0 = _time.perf_counter_ns()
+            try:
+                current_scope["invoke"](h, dict(ctx))
+                current_times.append((_time.perf_counter_ns() - t0) / 1e6)
+            except Exception:
+                current_errors += 1
+
+            t0 = _time.perf_counter_ns()
+            try:
+                candidate_scope["invoke"](h, dict(ctx))
+                candidate_times.append((_time.perf_counter_ns() - t0) / 1e6)
+            except Exception:
+                candidate_errors += 1
+
+    total  = rounds * len(blobs_to_test)
+    c_sr   = (total - current_errors)   / max(total, 1)
+    n_sr   = (total - candidate_errors) / max(total, 1)
+    c_lat  = sum(current_times)   / max(len(current_times),   1)
+    n_lat  = sum(candidate_times) / max(len(candidate_times), 1)
+
+    old_fit = c_sr / max(c_lat, 0.001)
+    new_fit = n_sr / max(n_lat, 0.001)
+
+    tolerance = _derive_tolerance()
+    winner    = "new" if new_fit >= old_fit * (1 - tolerance) else "old"
+
+    return {
+        "old":               {"hash": current_hash,   "fitness": old_fit,
+                              "success_rate": c_sr,   "avg_latency_ms": c_lat},
+        "new":               {"hash": candidate_hash, "fitness": new_fit,
+                              "success_rate": n_sr,   "avg_latency_ms": n_lat},
+        "winner":            winner,
+        "tolerance_applied": tolerance,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Engine governance — governed upgrade path (not part of run_all)
+# ---------------------------------------------------------------------------
+
+def evolve_engine(reviewer: str = "evolve") -> dict:
+    """
+    Evolve the engine blob through a governed upgrade path.
+
+    The engine is infrastructure — it is NOT iterated by run_all().
+    Call evolve_engine() explicitly to attempt an engine upgrade.
+
+    Cycle:
+      1. Load current logic/engine hash from manifest
+      2. Generate N_CANDIDATES via inference with ENGINE_ABI_CONTRACT
+      3. Structural ABI check: exec candidate, verify required scope keys
+      4. Triple-Pass Review (logic/engine exempt from exec-forbidden check)
+      5. Benchmark: exec current + candidate independently, run core blobs through each
+      6. Promote best winner with council approval; invalidate seed._ENGINE cache
+
+    Returns outcome ∈ {promoted, no-improvement, inference-unavailable, error}.
+    """
+    print("\n── Evolve Engine (logic/engine governed upgrade)")
+
+    manifest = promote.load_manifest()
+    current_hash = manifest.get("blobs", {}).get("engine", {}).get("logic/engine")
+    if not current_hash:
+        return {"label": "engine", "outcome": "error", "reason": "engine not in manifest"}
+
+    current_blob    = seed._raw_get(current_hash)
+    current_payload = current_blob["payload"]
+
+    evolve_reviewer_hash    = _ensure_evolve_reviewer()
+    passing_candidates: list[str] = []
+    last_error: str | None  = None
+
+    for i in range(N_CANDIDATES):
+        try:
+            candidate_payload = infer.generate_candidate(
+                current_payload=current_payload,
+                contract=ENGINE_ABI_CONTRACT,
+                fitness={},   # engine fitness is structural, not telemetry-derived
+                mutation_goal=(
+                    "Improve engine invoke() throughput and bytecode cache efficiency "
+                    "while preserving the ABI: invoke, record_feedback, _load_code, _CODE_CACHE "
+                    "must all be present in scope after exec. "
+                    "exec() is called directly — this is correct and intended for logic/engine."
+                ),
+            )
+        except infer.InferenceUnavailable as exc:
+            print(f"  inference unavailable ({exc!s:.60}) — skipping cycle")
+            return {"label": "engine", "outcome": "inference-unavailable"}
+
+        candidate_hash = seed.put("logic/engine", candidate_payload)
+        print(f"  candidate[{i}] {candidate_hash[:16]}...")
+
+        # Structural ABI check before formal review
+        abi_ok, abi_reason = _verify_engine_abi(candidate_hash)
+        if not abi_ok:
+            print(f"  candidate[{i}] ABI fail: {abi_reason}")
+            last_error = abi_reason
+            continue
+
+        # Triple-Pass Review — logic/engine is exempt from exec-forbidden (Pass 2 skipped)
+        try:
+            promote.triple_pass_review(candidate_hash, label="engine")
+        except promote.ReviewError as exc:
+            print(f"  candidate[{i}] review FAIL [{exc.pass_name}] {exc.detail}")
+            last_error = f"[{exc.pass_name}] {exc.detail}"
+            continue
+
+        print(f"  candidate[{i}] passed ABI + review")
+        passing_candidates.append(candidate_hash)
+
+    print(f"  {len(passing_candidates)}/{N_CANDIDATES} candidates passed ABI + review")
+
+    if not passing_candidates:
+        return {"label": "engine", "outcome": "no-improvement",
+                "reason": f"no candidates passed: {last_error}"}
+
+    best_hash: str | None = None
+    best_bm:   dict | None = None
+
+    for candidate_hash in passing_candidates:
+        bm = _benchmark_engine(current_hash, candidate_hash)
+        print(f"  bench {candidate_hash[:16]}...  "
+              f"old={bm['old']['fitness']:.4f}  new={bm['new']['fitness']:.4f}  "
+              f"winner={bm['winner']}")
+        if bm["winner"] == "new":
+            if best_bm is None or bm["new"]["fitness"] > best_bm["new"]["fitness"]:
+                best_hash = candidate_hash
+                best_bm   = bm
+
+    if best_hash is None:
+        print("  no improvement — keeping current engine")
+        return {"label": "engine", "outcome": "no-improvement", "benchmark": best_bm}
+
+    approval      = promote.issue_council_approval([best_hash], reviewer_hash=evolve_reviewer_hash)
+    manifest_hash = promote.promote(
+        label="engine",
+        blob_hashes=[best_hash],
+        council_approval_hash=approval,
+        version="1.15.0",
+    )
+    # Invalidate engine cache — next invoke() will load the promoted engine
+    seed._ENGINE      = None
+    seed._ENGINE_HASH = None
+
+    print(f"  engine promoted  manifest.hash={manifest_hash[:16]}...")
+    return {
+        "label":         "engine",
+        "outcome":       "promoted",
+        "old":           current_hash,
+        "new":           best_hash,
+        "manifest_hash": manifest_hash,
+        "benchmark":     best_bm,
+        "n_candidates":  len(passing_candidates),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Full evolution cycle for one label
 # ---------------------------------------------------------------------------
 
@@ -1868,7 +2141,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.14.0",
+        version="1.15.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -1898,7 +2171,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
     are fresh for subsequent benchmarks.
     """
     tolerance = _derive_tolerance()
-    print(f"── f_14: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
+    print(f"── f_15: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
 
     manifest = promote.load_manifest()
     all_labels = list(manifest.get("blobs", {}).keys())
@@ -1918,7 +2191,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         results.append(r)
 
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_14 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.14.0")
+    print(f"\n  f_15 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.15.0")
     return results
 
 
@@ -1929,12 +2202,15 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(prog="evolve", description="f_7 self-modification engine")
-    parser.add_argument("label", nargs="?", help="Evolve one label (default: all)")
+    parser = argparse.ArgumentParser(prog="evolve", description="f_15 self-modification engine")
+    parser.add_argument("label", nargs="?", help="Evolve one label (default: all); use 'engine' to evolve the logic/engine blob")
     parser.add_argument("--reviewer", default="evolve")
     args = parser.parse_args()
 
-    if args.label:
+    if args.label == "engine":
+        result = evolve_engine(reviewer=args.reviewer)
+        print(json.dumps({k: v for k, v in result.items() if k != "benchmark"}, indent=2))
+    elif args.label:
         result = evolve_one(args.label, reviewer=args.reviewer)
         print(json.dumps({k: v for k, v in result.items() if k != "benchmark"}, indent=2))
     else:
