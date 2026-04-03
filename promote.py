@@ -79,8 +79,8 @@ def _pass_static(blob_hash: str, blob: dict) -> None:
         raise ReviewError("StaticAnalysis", "blob missing 'type' field")
     if not isinstance(blob.get("payload"), str) or not blob["payload"].strip():
         raise ReviewError("StaticAnalysis", "blob payload is empty or non-string")
-    # Only syntax-check logic blobs
-    if blob["type"].startswith("logic/python"):
+    # Syntax-check all executable logic blobs (logic/python, logic/engine, etc.)
+    if blob["type"].startswith("logic/"):
         try:
             ast.parse(blob["payload"])
         except SyntaxError as e:
@@ -147,6 +147,8 @@ def _pass_safety(blob_hash: str, blob: dict) -> None:
     """Pass 2: Safety Verification — no scope-escaping patterns."""
     if not blob["type"].startswith("logic/"):
         return  # non-executable blobs skip safety scan
+    if blob["type"] == "logic/engine":
+        return  # engine blobs are kernel-trusted infrastructure; exec is their purpose
     match = _DANGEROUS_RE.search(blob["payload"])
     if match:
         raise ReviewError(

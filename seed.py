@@ -83,7 +83,7 @@ def put(blob_type: str, payload: str) -> str:
 
 def _load_engine() -> dict[str, Any] | None:
     """
-    Load the engine expression from manifest.blobs["engine"]["logic/python"].
+    Load the engine expression from manifest.blobs["engine"]["logic/engine"].
     Exec it with kernel scope to obtain invoke(), record_feedback(), etc.
 
     Returns the engine scope dict, or None if no engine is promoted yet.
@@ -92,7 +92,7 @@ def _load_engine() -> dict[str, Any] | None:
     global _ENGINE, _ENGINE_HASH
     try:
         manifest = json.loads(MANIFEST_PATH.read_text())
-        engine_hash = manifest.get("blobs", {}).get("engine", {}).get("logic/python")
+        engine_hash = manifest.get("blobs", {}).get("engine", {}).get("logic/engine")
         if not engine_hash:
             return None
         if engine_hash == _ENGINE_HASH and _ENGINE is not None:
@@ -102,7 +102,6 @@ def _load_engine() -> dict[str, Any] | None:
             "_raw_get":        _raw_get,
             "put":             put,
             "_LAST_TELEMETRY": _LAST_TELEMETRY,
-            "_exec":           exec,          # primitive dispatch — injected, not called by name
             "BYTECODE_DIR":    BYTECODE_DIR,
         }
         exec(compile(engine_blob["payload"], "<engine>", "exec"), scope)  # noqa: S102 — ONE fixed dispatch

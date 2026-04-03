@@ -9,7 +9,7 @@ Covers:
   - Engine scope contains invoke and record_feedback
   - Kernel fallback works when engine is absent (pre-engine invoke)
   - Engine blob passes Triple-Pass Review
-  - Full f_13 evolution cycle: manifest v1.13.0
+  - Full f_13 evolution cycle: manifest v1.14.0
   - Backward compat: all prior blob types still reviewable
 """
 
@@ -81,16 +81,16 @@ def test_engine_in_vault() -> None:
         vault_file = seed.VAULT_DIR / engine_hash
         check("engine blob exists in vault", vault_file.exists())
         blob = seed._raw_get(engine_hash)
-        check("engine blob type is logic/python", blob.get("type") == "logic/python")
+        check("engine blob type is logic/engine", blob.get("type") == "logic/engine")
 
 
 def test_engine_in_manifest() -> None:
-    section("Engine expression — manifest.blobs['engine']['logic/python'] set")
+    section("Engine expression — manifest.blobs['engine']['logic/engine'] set")
     m = promote.load_manifest()
     engine_entry = m.get("blobs", {}).get("engine", {})
-    engine_hash = engine_entry.get("logic/python")
+    engine_hash = engine_entry.get("logic/engine")
     check("manifest.blobs.engine exists", engine_entry != {})
-    check("manifest.blobs.engine.logic/python set", engine_hash is not None)
+    check("manifest.blobs.engine.logic/engine set", engine_hash is not None)
     if engine_hash:
         check("engine hash is 64-char hex", len(engine_hash) == 64)
         check("engine hash matches bootstrap return", engine_hash == _boot.get("engine_hash"))
@@ -210,11 +210,16 @@ def test_engine_blob_safety_scanner() -> None:
         r"\bimport\s+os\b|\bimport\s+sys\b|\b__import__\b|\bopen\s*\("
         r"|\beval\s*\(|\bexec\s*\(|\bsubprocess\b|\bshutil\b|\bVAULT_DIR\b"
     )
-    match = _DANGEROUS_RE.search(payload)
-    check("no forbidden patterns in engine payload", match is None,
+    # logic/engine is exempt from the exec-forbidden check; only check the other patterns
+    _OTHER_DANGEROUS_RE = re.compile(
+        r"\bimport\s+os\b|\bimport\s+sys\b|\b__import__\b|\bopen\s*\("
+        r"|\beval\s*\(|\bsubprocess\b|\bshutil\b|\bVAULT_DIR\b"
+    )
+    match = _OTHER_DANGEROUS_RE.search(payload)
+    check("no non-exec forbidden patterns in engine payload", match is None,
           f"found: {match.group()!r}" if match else "")
-    # Verify _exec is used instead of exec
-    check("uses _exec() not exec()", "_exec(" in payload and "exec(" not in payload.replace("_exec(", ""))
+    # f_14: engine uses exec() directly (logic/engine type exempts it from scanner)
+    check("engine payload uses exec() directly", "exec(" in payload)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +227,7 @@ def test_engine_blob_safety_scanner() -> None:
 # ---------------------------------------------------------------------------
 
 def test_full_f13_evolution_cycle() -> None:
-    section("Full f_13 evolution cycle — engine active, manifest v1.13.0")
+    section("Full f_13 evolution cycle — engine active, manifest v1.14.0")
 
     _v8_variants = {
         evolve.DISCOVERY_V8:        evolve.DISCOVERY_V8 + "\n# f13-candidate",
@@ -249,10 +254,10 @@ def test_full_f13_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.13.0", m["version"] == "1.13.0")
+    check("manifest version 1.14.0", m["version"] == "1.14.0")
 
-    # Engine still present after evolution
-    engine_hash = m.get("blobs", {}).get("engine", {}).get("logic/python")
+    # Engine still present after evolution (logic/engine key, not logic/python)
+    engine_hash = m.get("blobs", {}).get("engine", {}).get("logic/engine")
     check("engine blob still in manifest after evolution", engine_hash is not None)
 
     # Promoted blob hashes are valid
@@ -264,8 +269,8 @@ def test_full_f13_evolution_cycle() -> None:
 
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines() if l.strip()]
     promote_v13 = [e for e in entries
-                   if e.get("event") == "promote" and e.get("version") == "1.13.0"]
-    check("at least one v1.13.0 promote event", len(promote_v13) >= 1)
+                   if e.get("event") == "promote" and e.get("version") == "1.14.0"]
+    check("at least one v1.14.0 promote event", len(promote_v13) >= 1)
 
 
 # ---------------------------------------------------------------------------

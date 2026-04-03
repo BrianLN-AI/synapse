@@ -7,7 +7,7 @@ Covers:
   - blake3 is the manifest hash function: manifest["hash"] matches blake3
   - SHA-256 is NOT used: hashlib not imported in seed.py or promote.py
   - Hash length unchanged: 64 hex chars (256-bit output, same as SHA-256)
-  - Full f_12 evolution cycle: manifest v1.13.0
+  - Full f_12 evolution cycle: manifest v1.14.0
   - Backward compat: all prior blob types still reviewable
   - Credential safety: no CF strings in vault or audit log
 """
@@ -152,7 +152,7 @@ def test_promote_does_not_import_hashlib() -> None:
 # ---------------------------------------------------------------------------
 
 def test_full_f12_evolution_cycle() -> None:
-    section("Full f_12 evolution cycle — blake3 hashes, manifest v1.13.0")
+    section("Full f_12 evolution cycle — blake3 hashes, manifest v1.14.0")
 
     _v8_variants = {
         evolve.DISCOVERY_V8:        evolve.DISCOVERY_V8 + "\n# f12-candidate",
@@ -179,7 +179,7 @@ def test_full_f12_evolution_cycle() -> None:
     check("at least one blob promoted", len(promoted) >= 1, f"got {len(promoted)}")
 
     m = promote.load_manifest()
-    check("manifest version 1.13.0", m["version"] == "1.13.0")
+    check("manifest version 1.14.0", m["version"] == "1.14.0")
 
     # Verify promoted blob hashes are blake3 (64-char hex, match blake3)
     for label in ["discovery", "planning", "telemetry-reader"]:
@@ -198,8 +198,8 @@ def test_full_f12_evolution_cycle() -> None:
 
     entries = [json.loads(l) for l in Path("./audit.log").read_text().splitlines() if l.strip()]
     promote_v12 = [e for e in entries
-                   if e.get("event") == "promote" and e.get("version") == "1.13.0"]
-    check("at least one v1.13.0 promote event", len(promote_v12) >= 1)
+                   if e.get("event") == "promote" and e.get("version") == "1.14.0"]
+    check("at least one v1.14.0 promote event", len(promote_v12) >= 1)
 
 
 # ---------------------------------------------------------------------------
