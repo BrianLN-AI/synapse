@@ -111,7 +111,8 @@ f(unknown) → f(undefined)
 Non-council lineage      Council lineage
 (solo agent)             (governed, multi-agent)
      │                         │
-  f_0–f_2                f_0–f_14 (current: v1.14.0)
+  f_0–f_8+               f_0–f_14 (current: v1.14.0)
+  (untagged past f_2)
                          f_n = f_{n-1}(f_{n-1})
 ```
 
@@ -207,6 +208,8 @@ docker run --rm -it \
   --cap-drop ALL \
   --user 1000:1000 \
   -v "$(pwd)/blob_vault:/app/blob_vault:ro" \
+  -v "$(pwd):/app:ro" \
+  -w /app \
   python:3.12-slim python seed.py invoke <hash>
 ```
 
@@ -221,7 +224,7 @@ docker run --rm -it \
 Contributing to the fabric means contributing to the GOKR:
 
 1. Read [λ.md](λ.md) — understand the five invariants and the current objective
-2. Check out the experiment branch you want to extend (`council/f_12` or later)
+2. Check out the experiment branch you want to extend (`council/f_14` or later)
 3. Contribute a proposal: write a `proposal/roadmap` blob referencing the current GOKR hash
 4. Follow the ABI Contract — every blob assigns to `result` and uses `log()`
 5. Open a PR against the appropriate `f_<n>` branch (not `main`)
@@ -320,9 +323,7 @@ for the full multi-agent convergence protocol.
 
 ## License
 
-No explicit license file has been found in this repository.
-All rights are assumed to be reserved by the author(s) until a license is added.
-**Do not use, distribute, or modify this code in production without explicit permission.**
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
