@@ -1,11 +1,12 @@
 name: Update README Evolution Snapshots
 
-# Trigger on every branch push and every tag push.
+# Trigger on pushes to main and every tag push only.
+# Running on all branches caused constant conflicts on open PRs.
 # The commit made by this workflow uses [skip ci] so it doesn't trigger itself.
 on:
   push:
     branches:
-      - "**"
+      - main
     tags:
       - "**"
 
