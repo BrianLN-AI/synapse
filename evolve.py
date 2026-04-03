@@ -14,7 +14,7 @@ Cycle per blob (infrastructure or capability):
   5. Test:      call `ai devstral` to generate adversarial test/case blobs per candidate
                 Promote test cases; run test suite. Candidates failing any test discarded.
   6. Benchmark: benchmark all passing candidates vs current; take best winner
-  7. Promote:   best winner → Council Approval → manifest update (v1.19.0)
+  7. Promote:   best winner → Council Approval → manifest update (v1.20.0)
 
 run_all() iterates ALL logic/python labels in the manifest.
 evolve_engine() is a separate governed upgrade path for the logic/engine blob —
@@ -1486,6 +1486,39 @@ else:
                 )
 """
 
+LIST_CAPABILITIES_V1 = """\
+# list-capabilities v1: returns a structured summary of all registered capabilities.
+#
+# Input:  context["capabilities"] — dict from manifest["capabilities"], keyed by label.
+#         context["blobs"]        — dict from manifest["blobs"], for resolving current_hash.
+#
+# Output: result = list of capability dicts sorted by label.
+#   Each dict: {label, description, tags, registered_at, current_hash}
+
+capabilities = context.get("capabilities", {})
+blobs        = context.get("blobs", {})
+
+result = sorted(
+    [
+        {
+            "label":         label,
+            "description":   record.get("description", ""),
+            "tags":          record.get("tags", []),
+            "registered_at": record.get("registered_at", ""),
+            "current_hash":  (
+                blobs.get(label, {}).get("logic/python")
+                or blobs.get(label, {}).get("logic/engine")
+                or ""
+            ),
+        }
+        for label, record in capabilities.items()
+    ],
+    key=lambda x: x["label"],
+)
+
+log(f"list-capabilities v1: {len(result)} capabilities")
+"""
+
 # Planning v8: explicit burstiness penalty
 # Improvement: v7 uses p95_latency_ms as the latency input (vs avg in v6), which
 # penalises bursty blobs.  v8 makes the burstiness penalty explicit and tunable:
@@ -2069,7 +2102,7 @@ def evolve_engine(reviewer: str = "evolve") -> dict:
         label="engine",
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.19.0",
+        version="1.20.0",
     )
     # Invalidate engine cache — next invoke() will load the promoted engine
     seed._ENGINE      = None
@@ -2244,7 +2277,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.19.0",
+        version="1.20.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -2277,6 +2310,27 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
     print(f"── f_15: Self-Modification Cycle  (derived tolerance={tolerance:.4f})")
 
     manifest = promote.load_manifest()
+
+    # Bootstrap list-capabilities label if not yet in the manifest (f_20)
+    if "list-capabilities" not in manifest.get("blobs", {}):
+        evolve_reviewer_hash = _ensure_evolve_reviewer()
+        lc_hash    = seed.put("logic/python", LIST_CAPABILITIES_V1)
+        lc_approval = promote.issue_council_approval(
+            [lc_hash], reviewer_hash=evolve_reviewer_hash
+        )
+        promote.promote(
+            label="list-capabilities",
+            blob_hashes=[lc_hash],
+            council_approval_hash=lc_approval,
+            version=None,   # version updated by the evolve loop below
+        )
+        promote.register_capability(
+            "list-capabilities",
+            "Returns a structured list of all registered capabilities in the fabric",
+            tags=["infrastructure", "introspection"],
+        )
+        manifest = promote.load_manifest()   # reload after bootstrap
+
     all_labels = list(manifest.get("blobs", {}).keys())
 
     # telemetry-reader first (infrastructure); remaining labels in manifest order
@@ -2294,7 +2348,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         results.append(r)
 
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_19 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.19.0")
+    print(f"\n  f_20 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.20.0")
     return results
 
 

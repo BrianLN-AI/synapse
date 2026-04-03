@@ -444,10 +444,28 @@ def run(reviewer: str = "bootstrap") -> dict:
         )
         print(f"  promoted contract/{label:<14} manifest.hash={manifest_hash[:16]}...")
 
+    # --- Step 7: register core blobs as capabilities (f_20) ---
+    promote.register_capability(
+        "discovery",
+        "Content-addressed blob resolution: L1→L2→remote→federation peers",
+        tags=["infrastructure", "resolution"],
+    )
+    promote.register_capability(
+        "planning",
+        "Fitness-guided blob evolution scheduling and arbitration",
+        tags=["infrastructure", "evolution"],
+    )
+    promote.register_capability(
+        "telemetry-reader",
+        "Invocation telemetry aggregation and fitness scoring",
+        tags=["infrastructure", "telemetry"],
+    )
+
     print(f"\n  f_0 + f_7 defined. Manifest v1.0.0  hash={manifest_hash[:16]}...")
     print("  Feedback loop: telemetry → SuccessRate → Planning arbitration ✓")
     print(f"  Reviewer chain: bootstrap → evolve-engine ✓")
     print(f"  Contracts: discovery, planning, telemetry-reader ✓")
+    print(f"  Capabilities registered: discovery, planning, telemetry-reader ✓")
 
     return {
         **hashes,

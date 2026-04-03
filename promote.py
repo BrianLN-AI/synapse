@@ -946,6 +946,96 @@ def remove_peer(url: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Capability Registry (f_20)
+# ---------------------------------------------------------------------------
+
+def register_capability(
+    label: str,
+    description: str,
+    tags: list[str] | None = None,
+) -> None:
+    """
+    Register or update a capability entry in manifest["capabilities"][label].
+
+    The capability record stores human-readable metadata (description, tags) and
+    a registration timestamp. The current blob hash is resolved dynamically at
+    query time from manifest["blobs"] so it stays in sync with promotions.
+
+    Idempotent: re-registering with the same label overwrites the description/tags
+    but does not duplicate the entry.
+    """
+    manifest = load_manifest()
+    caps = manifest.setdefault("capabilities", {})
+    caps[label] = {
+        "description":   description,
+        "tags":          tags or [],
+        "registered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    _write_manifest(manifest)
+    with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "event":       "register_capability",
+            "label":       label,
+            "description": description,
+            "tags":        tags or [],
+            "timestamp":   time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }) + "\n")
+
+
+def list_capabilities() -> list[dict]:
+    """
+    Return all registered capabilities as a list of record dicts sorted by label.
+
+    Each record includes:
+      label, description, tags, registered_at, current_hash (from manifest["blobs"]).
+    """
+    manifest = load_manifest()
+    caps  = manifest.get("capabilities", {})
+    blobs = manifest.get("blobs", {})
+    result = []
+    for label in sorted(caps):
+        record = caps[label]
+        blob_entry = blobs.get(label, {})
+        current_hash = (
+            blob_entry.get("logic/python")
+            or blob_entry.get("logic/engine")
+            or ""
+        )
+        result.append({
+            "label":         label,
+            "description":   record.get("description", ""),
+            "tags":          record.get("tags", []),
+            "registered_at": record.get("registered_at", ""),
+            "current_hash":  current_hash,
+        })
+    return result
+
+
+def get_capability(label: str) -> dict | None:
+    """
+    Return the capability record for a single label, or None if not registered.
+    """
+    manifest = load_manifest()
+    caps = manifest.get("capabilities", {})
+    if label not in caps:
+        return None
+    record = caps[label]
+    blob_entry = manifest.get("blobs", {}).get(label, {})
+    current_hash = (
+        blob_entry.get("logic/python")
+        or blob_entry.get("logic/engine")
+        or ""
+    )
+    return {
+        "label":         label,
+        "description":   record.get("description", ""),
+        "tags":          record.get("tags", []),
+        "registered_at": record.get("registered_at", ""),
+        "current_hash":  current_hash,
+    }
+
+
+# ---------------------------------------------------------------------------
 
 def promote_test_cases(
     label: str,
