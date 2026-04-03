@@ -1,6 +1,6 @@
 # ADR-011: Council Identity as a Governed Blob — Content-Addressed and Promotable
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_6 (council/f_6, v1.6.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

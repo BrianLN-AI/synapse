@@ -1,6 +1,6 @@
 # CAP-004: p95 Latency Signal — Welford Online Algorithm for Tail-Latency
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_2 (council/f_2, v1.2.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

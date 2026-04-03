@@ -1,6 +1,6 @@
 # ADR-008: Feedback Blobs as Governance — Downstream Outcomes as Vault Artifacts
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_5 (council/f_5, v1.5.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

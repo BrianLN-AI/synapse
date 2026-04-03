@@ -1,6 +1,6 @@
 # ADR-005: f(N)(f(N)) Self-Modification Protocol — Recursive Self-Application
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_1 (council/f_1, v1.1.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

@@ -1,6 +1,6 @@
 # CAP-005: Burstiness Penalty — Explicit Spikiness Factor in Fitness Formula
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_3 (council/f_3, v1.3.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

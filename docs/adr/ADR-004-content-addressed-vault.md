@@ -1,6 +1,6 @@
 # ADR-004: Content-Addressed Vault — Blob Identity Is Its Hash
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_0 (council/f_0, v1.0.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

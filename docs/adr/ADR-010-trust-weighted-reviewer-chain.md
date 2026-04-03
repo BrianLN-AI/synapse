@@ -1,6 +1,6 @@
 # ADR-010: Trust-Weighted Reviewer Chain — Non-Uniform Trust Across Reviewers
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_6 (council/f_6, v1.6.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 

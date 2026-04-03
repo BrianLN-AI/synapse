@@ -1,6 +1,6 @@
 # ADR-007: Bytecode Cache Keyed by Content Hash — Immutable Blobs Mean the Cache Never Goes Stale
 **Date:** 2026-04-01
-**Status:** Proposed
+**Status:** Accepted — implemented in f_1 (L1 in-memory cache); disk persistence at f_3 (council/f_3, v1.3.0)
 **Flag:** CHERRY-PICK CANDIDATE
 **Branch:** council/f_6
 
