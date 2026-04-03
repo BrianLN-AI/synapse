@@ -253,7 +253,7 @@ for the full multi-agent convergence protocol.
 
 ## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-03 03:06 UTC
+**Last updated:** 2026-04-03 15:27 UTC
 
 ### Branches
 - `copilot/update-documentation-experiment-lineages`
@@ -267,7 +267,10 @@ for the full multi-agent convergence protocol.
 - `council/f_15`
 - `council/f_16`
 - `council/f_17`
+- `council/f_18`
+- `council/f_19`
 - `council/f_2`
+- `council/f_20`
 - `council/f_3`
 - `council/f_4`
 - `council/f_5`
@@ -293,6 +296,9 @@ for the full multi-agent convergence protocol.
 - `main`
 
 ### Tags
+- `v1.20.0`
+- `v1.19.0`
+- `v1.18.0`
 - `v1.17.0`
 - `v1.16.0`
 - `v1.15.0`
