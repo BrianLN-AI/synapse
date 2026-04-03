@@ -246,19 +246,69 @@ for the full multi-agent convergence protocol.
 <!-- AUTO-GENERATED:START -->
 <!-- This section is automatically updated by scripts/update_readme.py on every push. Do not edit manually. -->
 
-## Evolution Snapshots
+## 📊 Evolution Snapshots
 
-**Last updated:** 2026-04-02 UTC
+**Last updated:** 2026-04-03 02:13 UTC
 
 ### Branches
-- `council/f_0` through `council/f_12`
-- `f_0` through `f_8`
-- `docs/genesis-worldview` (this PR)
+- `copilot/update-documentation-experiment-lineages`
+- `council/f_0`
+- `council/f_1`
+- `council/f_10`
+- `council/f_11`
+- `council/f_12`
+- `council/f_13`
+- `council/f_2`
+- `council/f_3`
+- `council/f_4`
+- `council/f_5`
+- `council/f_6`
+- `council/f_7`
+- `council/f_8`
+- `council/f_9`
+- `docs/adr-bare-decisions`
+- `docs/adr-council-decisions`
+- `docs/genesis-worldview`
+- `f_0`
+- `f_1`
+- `f_10`
+- `f_2`
+- `f_3`
+- `f_4`
+- `f_5`
+- `f_6`
+- `f_7`
+- `f_8`
+- `f_9`
 - `main`
 
 ### Tags
-- `v1.0.0` through `v1.12.0`
-- `unknown` · `undefined` · `f_0` through `f_7`
+- `v1.13.0`
+- `v1.12.0`
+- `v1.11.0`
+- `v1.10.0`
+- `v1.9.0`
+- `v1.8.0`
+- `v1.7.0`
+- `v1.6.0`
+- `v1.5.0`
+- `v1.4.0`
+- `v1.3.0`
+- `v1.2.0`
+- `v1.1.0`
+- `v1.0.0`
+- `unknown`
+- `undefined`
+- `f_10`
+- `f_9`
+- `f_8`
+- `f_7`
+- `f_6`
+- `f_4`
+- `f_3`
+- `f_2`
+- `f_1`
+- `f_0`
 
 <!-- AUTO-GENERATED:END -->
 
