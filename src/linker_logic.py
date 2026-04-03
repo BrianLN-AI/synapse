@@ -224,10 +224,12 @@ class Linker:
         context = context or {}
         logs = []
         def log(msg): logs.append(f"[{time.time()}] {msg}")
+        # Cognitive & Discovery Primitives
         primitives = {
             "inference": self.inference, "embed": self.embed, "rerank": self.rerank,
             "get_capability": self.resolve_capability, "list_capabilities": self.list_capabilities,
             "invoke_capability": self.invoke_capability, "read_blob": self.adapter.read, "json": json,
+            "invoke": self.invoke, # f_11 Recursive Execution
             "crypto_sign": self.adapter.crypto_sign,
             "crypto_verify": self.adapter.crypto_verify,
             "get_public_key": self.adapter.get_public_key
@@ -235,6 +237,7 @@ class Linker:
 
         if self.is_authorized(h, context):
             primitives.update({"put": self.adapter.write, "propose": self.propose, "branch": self.branch, "rollback": self.rollback, "sign": self.sign, "tally": self.tally})
+        
         proxy_h = self.resolve_capability("proxy")
         request_envelope = context
         if proxy_h and h != proxy_h:
@@ -259,12 +262,12 @@ class Linker:
             payload = self.adapter.read(h)
             engine_h = self.resolve_capability("engine")
             if engine_h and h != engine_h:
-                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "SAFE_BUILTINS": SAFE_BUILTINS, "VaultAdapter": VaultAdapter, "Linker": Linker}
+                scope = {"context": {"target_payload": payload, "target_context": request_envelope, "execution_plan": execution_plan, "state": state}, "log": log, "result": None, "subprocess": subprocess, "json": json, "hashlib": hashlib, "__builtins__": __builtins__, "inference": self.inference, "embed": self.embed, "invoke": self.invoke, "SAFE_BUILTINS": SAFE_BUILTINS, "VaultAdapter": VaultAdapter, "Linker": Linker}
                 scope.update(primitives)
                 exec(self.adapter.read(engine_h), scope, scope)
                 result = scope.get("result"); state = scope.get("context", {}).get("state", state)
             else:
-                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "__builtins__": SAFE_BUILTINS, "inference": self.inference, "embed": self.embed, "VaultAdapter": VaultAdapter, "Linker": Linker}
+                scope = {"context": request_envelope, "log": log, "result": None, "execution_plan": execution_plan, "state": state, "hashlib": hashlib, "__builtins__": SAFE_BUILTINS, "inference": self.inference, "embed": self.embed, "invoke": self.invoke, "VaultAdapter": VaultAdapter, "Linker": Linker}
                 scope.update(primitives)
                 exec(payload, scope, scope)
                 result = scope.get("result"); state = scope.get("state", state)
