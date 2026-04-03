@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
 seed.py — D-JIT Logic Fabric Kernel
-f_13: engine-as-expression — kernel split.
+f_16: multihash address format (ADR-015).
 
 Kernel invariants:
   - vault: _raw_get + put (content-addressed store)
   - one fixed dispatch: exec(engine_payload, scope)  [_load_engine]
   - invoke / record_feedback: delegate to engine if loaded, else kernel fallback
 
-The engine expression (manifest.blobs["engine"]["logic/python"]) holds all
+Address format (ADR-015):
+  Canonical string: blake3:<64-char-hex>
+  Vault storage:    bare 64-char hex (filenames; colons not safe on all FS)
+  Backward compat:  bare hex accepted everywhere — treated as implicit blake3
+
+The engine expression (manifest.blobs["engine"]["logic/engine"]) holds all
 execution policy: telemetry, bytecode cache, ABI enforcement.  It is
 promotable, governed, and swappable without changing this file.
 
@@ -44,6 +49,38 @@ _CODE_CACHE: dict[str, Any] = {}
 
 
 # ---------------------------------------------------------------------------
+# MULTIHASH — address helpers (ADR-015)
+# ---------------------------------------------------------------------------
+
+def _to_bare_hex(address: str) -> str:
+    """
+    Normalize a multihash address to bare hex for vault file lookup.
+
+    Accepts:
+      "blake3:af1349b9..."  →  "af1349b9..."
+      "sha256:e3b0c442..."  →  "e3b0c442..."
+      "af1349b9..."         →  "af1349b9..."   (bare hex, already normalized)
+
+    Vault files are named by bare hex only.  The multihash prefix lives in the
+    public API and manifest; it is stripped before any filesystem operation.
+    """
+    if ":" in address:
+        return address.split(":", 1)[1]
+    return address
+
+
+def _to_multihash(bare_hex: str, func: str = "blake3") -> str:
+    """
+    Add a multihash prefix to a bare hex digest string.
+
+    "af1349b9..."  →  "blake3:af1349b9..."
+    """
+    if ":" in bare_hex:
+        return bare_hex          # already prefixed — idempotent
+    return f"{func}:{bare_hex}"
+
+
+# ---------------------------------------------------------------------------
 # VAULT — core content-addressed store
 # ---------------------------------------------------------------------------
 
@@ -51,8 +88,12 @@ def _raw_get(content_hash: str) -> dict:
     """
     BIOS-level blob retrieval.  Reads directly from filesystem.
     Never delegates to any blob — prevents infinite recursion during bootstrap.
+
+    Accepts both prefixed ("blake3:<hex>") and bare hex addresses.
+    Vault files are always stored under bare hex names.
     """
-    blob_path = VAULT_DIR / content_hash
+    bare = _to_bare_hex(content_hash)
+    blob_path = VAULT_DIR / bare
     if not blob_path.exists():
         raise FileNotFoundError(f"BIOS: blob {content_hash} not found in vault")
     with open(blob_path, "r", encoding="utf-8") as f:
@@ -62,19 +103,20 @@ def _raw_get(content_hash: str) -> dict:
 def put(blob_type: str, payload: str) -> str:
     """
     Accept type/payload → compute blake3 → store in blob_vault/.
-    Returns the content hash.  Idempotent: same content → same address.
+    Returns the multihash address ("blake3:<hex>").
+    Idempotent: same content → same address.
     """
     VAULT_DIR.mkdir(parents=True, exist_ok=True)
 
-    envelope = json.dumps({"type": blob_type, "payload": payload}, sort_keys=True)
-    content_hash = blake3.blake3(envelope.encode("utf-8")).hexdigest()
+    envelope  = json.dumps({"type": blob_type, "payload": payload}, sort_keys=True)
+    bare_hex  = blake3.blake3(envelope.encode("utf-8")).hexdigest()
 
-    blob_path = VAULT_DIR / content_hash
+    blob_path = VAULT_DIR / bare_hex
     if not blob_path.exists():
         with open(blob_path, "w", encoding="utf-8") as f:
             f.write(envelope)
 
-    return content_hash
+    return _to_multihash(bare_hex)   # canonical multihash address
 
 
 # ---------------------------------------------------------------------------
@@ -91,10 +133,12 @@ def _load_engine() -> dict[str, Any] | None:
     """
     global _ENGINE, _ENGINE_HASH
     try:
-        manifest = json.loads(MANIFEST_PATH.read_text())
+        manifest    = json.loads(MANIFEST_PATH.read_text())
         engine_hash = manifest.get("blobs", {}).get("engine", {}).get("logic/engine")
         if not engine_hash:
             return None
+        # Normalize before cache comparison — manifest may store bare or prefixed form
+        engine_hash = _to_multihash(_to_bare_hex(engine_hash))
         if engine_hash == _ENGINE_HASH and _ENGINE is not None:
             return _ENGINE
         engine_blob = _raw_get(engine_hash)
@@ -142,9 +186,14 @@ def _invoke_kernel(content_hash: str, context: dict | None = None) -> Any:
     Kernel-path invoke — no engine delegation.
     Used during bootstrap before the engine expression is promoted.
     Full ABI enforcement and telemetry; L1-only bytecode cache (no disk persistence).
+
+    Accepts both prefixed and bare hex addresses; normalizes internally.
+    Cache key uses the canonical multihash form for stable lookups.
     """
-    blob = _raw_get(content_hash)
-    payload = blob["payload"]
+    # Normalize to canonical multihash for cache key; bare hex for file access via _raw_get
+    canonical = _to_multihash(_to_bare_hex(content_hash))
+    blob      = _raw_get(canonical)
+    payload   = blob["payload"]
 
     if context is None:
         context = {}
@@ -159,16 +208,17 @@ def _invoke_kernel(content_hash: str, context: dict | None = None) -> Any:
     tracemalloc.start()
     start_ns = time.perf_counter_ns()
 
+    bare = _to_bare_hex(canonical)
     try:
-        if content_hash not in _CODE_CACHE:
-            _CODE_CACHE[content_hash] = compile(
-                payload, f"<blob:{content_hash[:8]}>", "exec"
+        if canonical not in _CODE_CACHE:
+            _CODE_CACHE[canonical] = compile(
+                payload, f"<blob:{bare[:8]}>", "exec"
             )
-        exec(_CODE_CACHE[content_hash], scope)  # noqa: S102
+        exec(_CODE_CACHE[canonical], scope)  # noqa: S102
     except Exception as exc:
         elapsed = (time.perf_counter_ns() - start_ns) / 1e6
         tracemalloc.stop()
-        _record_telemetry_kernel(content_hash, elapsed, 0, log_lines, str(exc))
+        _record_telemetry_kernel(canonical, elapsed, 0, log_lines, str(exc))
         raise
 
     elapsed_ms = (time.perf_counter_ns() - start_ns) / 1e6
@@ -178,14 +228,14 @@ def _invoke_kernel(content_hash: str, context: dict | None = None) -> Any:
 
     if "result" not in scope:
         _record_telemetry_kernel(
-            content_hash, elapsed_ms, memory_kb, log_lines,
+            canonical, elapsed_ms, memory_kb, log_lines,
             "ABI violation: result variable not set",
         )
         raise RuntimeError(
-            f"ABI violation: blob {content_hash} did not set 'result'"
+            f"ABI violation: blob {canonical} did not set 'result'"
         )
 
-    _record_telemetry_kernel(content_hash, elapsed_ms, memory_kb, log_lines, None)
+    _record_telemetry_kernel(canonical, elapsed_ms, memory_kb, log_lines, None)
     return scope["result"]
 
 

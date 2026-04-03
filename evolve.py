@@ -14,7 +14,7 @@ Cycle per blob (infrastructure or capability):
   5. Test:      call `ai devstral` to generate adversarial test/case blobs per candidate
                 Promote test cases; run test suite. Candidates failing any test discarded.
   6. Benchmark: benchmark all passing candidates vs current; take best winner
-  7. Promote:   best winner → Council Approval → manifest update (v1.15.0)
+  7. Promote:   best winner → Council Approval → manifest update (v1.16.0)
 
 run_all() iterates ALL logic/python labels in the manifest.
 evolve_engine() is a separate governed upgrade path for the logic/engine blob —
@@ -1359,11 +1359,13 @@ DISCOVERY_V8 = """\
 import json
 from pathlib import Path
 
-vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
-target_hash = context["hash"].lower()
+vault_dir = Path(context.get("vault_dir", "./blob_vault"))
+raw_hash  = context["hash"]
+# Normalize multihash address (e.g. "blake3:<hex>") to bare hex for vault lookup
+target_hash = (raw_hash.split(":", 1)[1] if ":" in raw_hash else raw_hash).lower()
 
 if len(target_hash) != 64 or not all(c in "0123456789abcdef" for c in target_hash):
-    raise ValueError(f"Discovery v8: invalid hash {context['hash']!r} — expected 64 hex chars")
+    raise ValueError(f"Discovery v8: invalid hash {raw_hash!r} — expected 64 hex chars or <func>:<hex>")
 
 if not vault_dir.is_dir():
     raise FileNotFoundError(f"Discovery v8: vault directory not found: {vault_dir}")
@@ -1966,7 +1968,7 @@ def evolve_engine(reviewer: str = "evolve") -> dict:
         label="engine",
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.15.0",
+        version="1.16.0",
     )
     # Invalidate engine cache — next invoke() will load the promoted engine
     seed._ENGINE      = None
@@ -2141,7 +2143,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.15.0",
+        version="1.16.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -2191,7 +2193,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         results.append(r)
 
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_15 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.15.0")
+    print(f"\n  f_16 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.16.0")
     return results
 
 

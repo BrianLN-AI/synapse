@@ -145,11 +145,13 @@ import json
 from pathlib import Path
 
 vault_dir = Path(context.get("vault_dir", "./blob_vault"))
-target_hash = context["hash"]
+raw_hash  = context["hash"]
+# Normalize multihash address (e.g. "blake3:<hex>") to bare hex for vault lookup
+target_hash = raw_hash.split(":", 1)[1] if ":" in raw_hash else raw_hash
 blob_path = vault_dir / target_hash
 
 if not blob_path.exists():
-    raise FileNotFoundError(f"Discovery L1: {target_hash} not found in vault")
+    raise FileNotFoundError(f"Discovery L1: {raw_hash} not found in vault")
 
 log(f"discovery: resolved {target_hash[:8]}... from L1")
 result = json.loads(blob_path.read_text())

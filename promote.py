@@ -576,20 +576,24 @@ def _verify_council_approval(
 
     if reviewer_hash:
         manifest = load_manifest()
-        if reviewer_hash not in manifest.get("reviewers", {}):
+        # Normalize both sides: bare hex for robust comparison across old/new format
+        reviewer_bare     = seed._to_bare_hex(reviewer_hash)
+        reviewers_bare    = {seed._to_bare_hex(k) for k in manifest.get("reviewers", {})}
+        if reviewer_bare not in reviewers_bare:
             raise ValueError(
                 f"Approval reviewer {reviewer_hash[:16]}... is not a promoted reviewer"
             )
-        if require_reviewer and reviewer_hash != require_reviewer:
+        if require_reviewer and reviewer_bare != seed._to_bare_hex(require_reviewer):
             raise ValueError(
                 f"Approval was signed by {reviewer_hash[:16]}..., "
                 f"expected {require_reviewer[:16]}..."
             )
 
-    approved = set(approval.get("approved_blobs", []))
-    missing  = set(blob_hashes) - approved
-    if missing:
-        raise ValueError(f"Council approval does not cover blobs: {sorted(missing)}")
+    # Normalize both sides to bare hex so mixed old/new format comparisons work
+    approved_bare = {seed._to_bare_hex(h) for h in approval.get("approved_blobs", [])}
+    missing_bare  = {seed._to_bare_hex(h) for h in blob_hashes} - approved_bare
+    if missing_bare:
+        raise ValueError(f"Council approval does not cover blobs: {sorted(missing_bare)}")
 
     return approval
 
