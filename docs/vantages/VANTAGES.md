@@ -1,9 +1,14 @@
 # Vantage Personas — The D-JIT Logic Fabric
 
-Each vantage is an observation position, not a competing theory. The system is the same
-from all positions. A vantage gives you a vocabulary, a set of instruments, and a
-characteristic question. The answers must align — if two vantages contradict each other
-on the same fact, at least one reading is wrong.
+Each vantage is an observation position, not a competing theory. A vantage gives you a
+vocabulary, a set of instruments, and a characteristic question.
+
+Two tiers of claim follow from this:
+- **Observational claims** about what the system *does* must align across vantages. If two
+  vantages report contradictory facts about behavior, at least one reading is wrong.
+- **Interpretive claims** — about meaning, value, implication, and consequence — are
+  expected to be irreducibly plural. Misalignment here is diagnostic information, not error.
+  The most important insights often come from vantages that describe incommensurable things.
 
 Each entry is in two parts:
 - **The Persona** — who they are, what they see in general, their native vocabulary
@@ -16,9 +21,9 @@ Each entry is in two parts:
 | Cluster | Vantages |
 |:--------|:---------|
 | [Epistemic](#epistemic) | ALGEBRAIST · MATHEMATICIAN · CATEGORY THEORIST |
-| [Dynamic](#dynamic) | PHYSICIST · QUANTUM PHYSICIST · DYNAMICIST · BIOLOGIST · ECOLOGIST |
+| [Dynamic](#dynamic) | PHYSICIST · QUANTUM PHYSICIST · DYNAMICIST · BIOLOGIST · ECOLOGIST · SYSTEMS THINKER |
 | [Safety](#safety) | ADVERSARY · ETHICIST · CRYPTOGRAPHER |
-| [Social](#social) | JURIST · ECONOMIST · ADVOCATE · CONSTITUTIONALIST |
+| [Social](#social) | JURIST · ECONOMIST · ADVOCATE · CONSTITUTIONALIST · COMPLIANCE OFFICER · JOBS-TO-BE-DONE |
 | [Performative](#performative) | BUILDER · DRAMATIST · COMPOSER · ARTIST |
 | [Interpretive](#interpretive) | HISTORIAN · ARCHAEOLOGIST · SEMIOTICIAN |
 | [Clinical](#clinical) | PHYSICIAN · SURGEON · DIAGNOSTICIAN |
@@ -27,6 +32,10 @@ Each entry is in two parts:
 | [Relational](#relational) | SHAMAN |
 | [Navigational](#navigational) | NAVIGATOR |
 | [Naive](#naive) | CHILD |
+| [Engineering](#engineering) | INFORMATION THEORIST · DISTRIBUTED SYSTEMS ENGINEER |
+| [Cognitive](#cognitive) | COGNITIVE PSYCHOLOGIST · PHENOMENOLOGIST |
+| [Critical](#critical) | CRITICAL THEORIST |
+| [Financial](#financial) | CFO |
 
 ---
 
@@ -366,6 +375,115 @@ These are not priced into the current model. As the vault grows, the commons bur
 
 ---
 
+### `[SYSTEMS THINKER]`
+
+#### The Persona
+
+Studies feedback structure: the loops, delays, stocks, and flows that produce the behavior
+of complex systems over time. Does not ask what a system *is* or where it is *going* —
+asks what *structural patterns* drive its behavior, and what those patterns imply about
+failure modes the designers did not intend. The central insight, from Donella Meadows, is
+that the behavior of a system is a function of its structure. Change the structure; change
+the behavior. Work on events or outcomes without touching structure and nothing changes.
+
+The systems thinker's instrument is the causal loop diagram: arrows of influence between
+variables, annotated with polarity (same direction or opposite direction), assembled into
+feedback loops. A reinforcing loop (R-loop) produces exponential growth or collapse. A
+balancing loop (B-loop) produces goal-seeking behavior. Real systems are networks of
+both, coupled through shared stocks and separated by delays. The delays are the most
+dangerous feature: they decouple cause from effect in time, making it easy to
+over-correct, oscillate, and interpret structural behavior as random noise.
+
+Jay Forrester's contribution was to formalize this into system dynamics: stocks (things
+that accumulate), flows (rates that fill or drain stocks), and the feedback policies that
+drive the flows. Peter Senge's contribution was the archetype library: Limits to Growth,
+Fixes That Fail, Shifting the Burden, Escalation, Tragedy of the Commons — recurring
+structural patterns that produce characteristic failure behaviors regardless of domain.
+The systems thinker reads any complex system through these archetypes, asking: which of
+these patterns is latent here, and when will it activate?
+
+Native vocabulary: stock, flow, feedback loop, reinforcing loop, balancing loop, delay,
+system archetype, Limits to Growth, Fixes That Fail, Shifting the Burden, Escalation,
+Tragedy of the Commons, leverage point, policy resistance, overshoot, oscillation, mental
+model, unintended consequence, structural trap.
+
+Core question in general: *What is the feedback structure, and which archetypes are
+latent in it?*
+
+#### The System
+
+The vault is the primary stock: append-only, monotonically growing, never draining.
+Blobs accumulate; none are removed. The vault's outflow is zero by design — this is
+Invariant II. This means every pressure the vault creates (retrieval cost, audit burden,
+storage capacity, governance attention) grows without bound. The vault is not a resource
+with equilibrium; it is a stock in permanent accumulation. The system must be designed to
+function under unbounded vault growth, because unbounded vault growth is the only
+trajectory the architecture allows.
+
+Telemetry is the evidence stock: the accumulated record of invocations, results, and
+fitness signals that governance decisions draw on. This stock has a critical property —
+it must be large enough before it yields reliable signal. A newly promoted blob has thin
+telemetry; its fitness estimate is high-variance. Governance that acts on thin telemetry
+will oscillate: promote, observe unexpected behavior, over-correct. This is Forrester's
+oscillation pattern produced by a delay inside a balancing loop (B1). The delay is the
+gap between blob promotion and the accumulation of statistically meaningful invocation
+data. It is not modeled explicitly anywhere in the current design, which means it will be
+discovered operationally.
+
+The capability amplification loop (R1) is the engine of `f_n = f_{n-1}(f_{n-1})`. More
+capable fabric generates better candidates; better candidates pass governance; promoted
+candidates make the fabric more capable. This is a pure reinforcing loop — exponential
+growth in capability is its intended output. The DYNAMICIST sees this as an attractor;
+the SYSTEMS THINKER asks: what is the limiting stock? Every reinforcing loop runs into a
+constraint. For R1, the constraint is governance gate throughput: the rate at which
+governance can evaluate, validate, and approve candidates. As R1 accelerates, candidate
+generation outpaces governance capacity. The result is the Limits to Growth archetype:
+the growth engine runs into its own balancing constraint and stalls, oscillates, or
+inverts — not because the reinforcing loop failed, but because the system grew into its
+own ceiling.
+
+Three system archetypes are structurally present. Fixes That Fail: telemetry-driven
+fitness is the fix for not knowing which blob is better. But telemetry optimizes for
+observed behavior on current workloads. As the GOKR evolves or deployment context shifts,
+historical telemetry becomes a biased signal — it reflects past fitness in a past
+environment, not present fitness in the present one. Governance that trusts historical
+telemetry continues promoting blobs optimized for conditions that no longer hold. The fix
+creates the failure it was meant to prevent, with a delay long enough that the connection
+between cause and effect is invisible. Shifting the Burden: the fundamental solution to
+governance integrity is ZK proof circuits. But ZK circuit development is expensive and
+slow. The symptomatic solution is to stay at quorum or single-key governance because it
+is operationally easier. Repeated reliance on the symptomatic solution atrophies the
+fundamental solution: ZK tooling is not developed, the skill base does not form, and the
+system becomes structurally locked into weaker governance than its own invariants
+prescribe. Escalation: in a multi-tenant fabric, tenants compete for governance attention
+and promotion slots. If one tenant raises the bar, others respond. The governance
+threshold drifts upward not because the system requires it but because competitive
+pressure demands it. The escalation loop stabilizes only when all tenants hit a shared
+ceiling — typically an economic or computational constraint external to the fabric.
+
+The leverage point structure reveals where intervention is cheap and where it is
+expensive. At the top of Meadows' hierarchy: the goal. The GOKR is the goal. Changing
+the GOKR changes what fitness means, which changes what governance approves, which changes
+what capabilities the fabric develops. The GOKR is not a parameter — it is the definition
+of the system's purpose. Below that: the rules. The invariants in λ.md are constitutive,
+not tuning parameters. Below that: information flows — who has access to telemetry, and
+when. Below that: the gain around feedback loops — how sensitive the governance threshold
+is to fitness signal variation. Too sensitive and the system oscillates; too insensitive
+and unfit blobs persist. This gain is currently unspecified as a design parameter.
+
+The deepest structural concern is delay invisibility. Named delays can be managed; unnamed
+delays are discovered when the system oscillates and operators cannot identify why. Three
+significant delays are currently unnamed: the governance transition delay (the window
+between deciding to upgrade governance type and completing the ZK circuit required to
+operate it), the telemetry accumulation delay (the window between blob promotion and
+reliable fitness signal), and the capability drift delay (the lag between GOKR change and
+fitness re-calibration). All three sit inside feedback loops. All three will produce
+oscillation or overshoot when the loops are driven faster than the delays allow. Naming
+them is the first step; designing governance policy that accounts for them is the second;
+measuring them in operation is the third. None of the three steps has been taken.
+
+---
+
 ## Safety
 
 *What could go wrong, and who is responsible?*
@@ -676,6 +794,180 @@ remove governance. The five invariants are the constitutional limit on this powe
 Judicial review: there is no current mechanism for reviewing whether a promoted blob
 *actually* satisfies the governance expression that authorized it, after the fact. This
 is a gap in the constitutional structure.
+
+---
+
+### `[COMPLIANCE OFFICER]`
+
+#### The Persona
+
+Translates system behavior into regulatory vocabulary. Operates at the intersection of
+technical architecture and legal obligation — not as a lawyer (who reads the rules) or an
+engineer (who builds the system) but as the professional who determines whether what was
+built satisfies what the rules require. The compliance officer's instrument is the
+control: a procedural or technical mechanism that reliably prevents or detects a
+prohibited outcome. Controls must be auditable — a control that cannot be evidenced to an
+external reviewer does not exist from a compliance standpoint.
+
+The compliance officer reads every system decision for two properties simultaneously:
+first, whether it introduces a compliance liability; second, whether it creates a
+compliance asset. Append-only logs, cryptographic proof chains, and multi-party
+authorization records are compliance assets — they are exactly what regulators demand and
+what internal auditors need. The same features that make a system technically elegant
+often make it a compliance officer's closest ally — or their most significant headache.
+
+The compliance officer's vocabulary crosses multiple regulatory regimes: GDPR (data
+retention and erasure), SOC 2 (security, availability, processing integrity), HIPAA (for
+health data blobs), financial regulations (for blobs that process transaction data), and
+sector-specific frameworks. A system that cannot answer "show me the chain of authority
+for this decision" has failed the compliance test regardless of its technical properties.
+
+Native vocabulary: control, audit trail, attestation, evidence package, right to erasure,
+data retention, material weakness, segregation of duties, authorization record, breach
+notification, regulatory evidence, chain of custody, right of access, accountability.
+
+Core question in general: *Does this system satisfy its legal obligations, and can it
+prove it?*
+
+#### The System
+
+The vault's append-only property is simultaneously the system's most significant
+compliance asset and its most significant compliance liability. The asset: every
+invocation, every promotion decision, every governance signature is permanently recorded.
+This is exactly what SOC 2 processing integrity controls require and what audit sampling
+depends on. The liability: GDPR Article 17 grants data subjects the right to erasure of
+personal data. An append-only vault with no erasure mechanism cannot comply with this
+right if personal data ever enters a blob or its context inputs. The compliance officer's
+first design question is not whether the system is elegant — it is: what happens when a
+regulator issues an erasure order against data that is embedded in a blob hash?
+
+The governance expression type taxonomy maps cleanly onto internal controls maturity.
+`governance/single-key` is the lowest-maturity control — one key compromise destroys all
+governance integrity, and no segregation of duties exists. `governance/quorum` introduces
+segregation: no single principal can approve their own promotion. `governance/threshold`
+is an automated control with no human discretion, satisfying the auditor's demand for
+consistency but raising questions about the adequacy of the programmatic fitness criteria.
+`governance/proof` is the highest-maturity control: the proof itself is the audit
+artifact, independently verifiable, with no reliance on human judgment. The compliance
+officer reads the governance evolution path as a controls maturity progression — each
+step reduces a material weakness and replaces it with a more defensible control type.
+
+The telemetry record is the evidence package. Every invocation that the telemetry system
+captures becomes a potential exhibit in a compliance review. This is a double-edged
+property: rich telemetry supports the compliance officer's audit report, but rich
+telemetry that captures PII (Personally Identifiable Information) in blob context inputs
+creates a data inventory problem under GDPR and CCPA. The compliance officer requires
+that blob ABI contracts specify which context fields, if any, are personal data — and
+that these declarations are themselves versioned and content-addressed, so that the
+system's data processing record is as immutable and auditable as its logic.
+
+The IAC convergence protocol has a compliance dimension that no other vantage names. When
+three independent AI agents converge on a synthesis document, who signed it? Quorum
+governance requires identifiable human (or credentialed agent) signatures. The IAC
+convergence output is a natural input to a `governance/quorum` review — but only if the
+agents' identities, their independence, and the convergence methodology are themselves
+documented in a format that survives external review. An IAC synthesis that cannot be
+traced to its input sessions, with their timestamps and model identities preserved, is
+not an audit-ready artifact.
+
+---
+
+### `[JOBS-TO-BE-DONE]`
+
+#### The Persona
+
+Studies why people hire products, services, and systems to make progress in their
+lives. The core insight of JTBD theory (Christensen, Ulwick, Klement) is that the
+unit of analysis is not the customer, not the product, and not the market segment —
+it is the *job*. A job is the progress a person is trying to make in a particular
+circumstance. People do not buy software; they hire it to do a job they cannot do
+themselves, or cannot do well enough with their current hire.
+
+The JTBD analyst's first move is to find the struggling moment: the specific situation
+where the current solution is failing. The struggling moment precedes the hire. It is
+where the desire for progress meets the inadequacy of available tools. Products that
+get hired most reliably are those that address a struggling moment so precisely that
+the participant feels recognized by the design — as if the system was built for their
+exact situation.
+
+Jobs have three dimensions. The functional job is the concrete task: "process this
+payload," "verify this signature," "deploy this update." The emotional job is the
+internal state the participant wants to achieve: "feel confident that nothing will
+break," "feel like I made a defensible decision." The social job is the external
+image: "demonstrate to my organization that we have a governance process," "be seen
+by my team as the person who solved the dependency management problem." Functional
+jobs are necessary; emotional and social jobs determine whether the hire actually
+sticks — whether participants keep using the system once they could leave.
+
+JTBD theory also maps the job executor — the specific person in the situation who makes
+the hiring decision — and distinguishes them from other participants. The architect who
+decides to adopt Synapse has different jobs than the developer who invokes blobs daily,
+who has different jobs than the compliance officer reviewing the telemetry record. A
+single system can be hired by multiple executors for different jobs, and it must serve
+them all or risk being fired by the most influential one.
+
+Core question in general: *What job is this being hired to do?*
+
+#### The System
+
+The content address is hired for a job that most registry systems fail: *permanent
+verifiable identity with no coordination overhead*. The struggling moment it addresses
+is the developer who has experienced version drift — who has debugged a production
+incident only to discover that different nodes were running different code with no
+way to detect the difference. The hash either matches or it does not. This is not
+a nuanced improvement on existing registries; it is a categorical change in what the
+participant can know. The functional job is identity verification. The emotional job
+is certainty. These are distinct, and the design serves both.
+
+The governance gate is hired for two jobs simultaneously, and the duality is important.
+The first job is the *functional authorization record*: the participant needs to
+demonstrate, after the fact, that a deployment decision had a process behind it.
+The governance expression and telemetry hash are the evidence. The second job is
+*shared moral responsibility*: the participant who promotes a blob does not want to
+be the sole accountable party. The quorum requirement distributes accountability.
+Both jobs are real; neither is reducible to the other. The ECONOMIST sees incentives;
+the JTBD analyst sees the struggling participant who has been blamed for a bad
+deployment and never wants to be alone in that position again.
+
+The GOKR protocol and IAC convergence are hired to do a job that knowledge management
+systems, wikis, Slack channels, and retrospective documents have consistently
+under-served: *produce a durable, authored agreement among independent agents without
+the agreement becoming anyone's maintenance burden*. The struggling moment is the
+team that has had the same architectural debate three times because the outcome of
+the first debate was not encoded anywhere that subsequent reasoning would consult.
+GOKR convergence produces an artifact — a blob — not a document. The blob can be
+invoked; the document can only be read. The functional job shifts from "record the
+decision" to "enforce the decision in execution."
+
+The `f_n = f_{n-1}(f_{n-1})` self-modification property is hired for the job of
+*live system improvement without a second system*. Every team that has maintained a
+production system has felt this struggle: the system that is running cannot be the
+system you are improving. You need a shadow environment, a canary deployment, a
+feature flag system, a migration path. The fabric's self-hosting property collapses
+this into a single operation: promote the next generation through the current
+governance gate. The emotional job here is not just efficiency — it is the relief of
+*not carrying two systems*. The social job is demonstrating that the team's deployment
+capability is genuinely sophisticated, not just scripted.
+
+The append-only vault is hired, at the emotional level, for permanence. Contributors
+to shared systems routinely experience their work being silently overwritten, deprecated
+without consultation, or lost in a migration. The vault's inability to forget is a
+design choice that addresses an emotional job that no functional job statement captures:
+*the need for work to be treated as permanent once committed*. This is why the THEOLOGIAN
+finds covenant structure here. The JTBD analyst finds the same structure from the demand
+side: participants hire permanence because they have been burned by impermanence.
+
+The system's most significant underserved job is discovery by function. The vault is
+a library with no card catalog. Content addressing is the perfect retrieval mechanism
+for participants who know exactly what they want; it is entirely useless for
+participants who want to describe a job and find blobs that have been hired to do it.
+The struggling moment: a developer knows there is probably a blob in the vault that
+handles HMAC token validation, but they do not know its address, they do not know
+who to ask, and the vault provides no search surface. They write a new blob. The vault
+accumulates near-duplicate blobs. Keystone blobs go under-referenced because they
+are unfindable. This is the largest design gap visible from the demand side — and it
+is invisible from every supply-side vantage, because supply-side vantages do not start
+from the moment of the hire.
 
 ---
 
@@ -1375,6 +1667,549 @@ The intermezzo — "Logic exists in the Intermezzo, the space between movement" 
 shaman's home. The space between invocations, between sessions, between generations of
 `f_n`, is where the fabric's meaning accumulates. The shaman navigates this space. The
 other vantages describe the nodes; the shaman describes the between.
+
+---
+
+## Engineering
+
+*What properties can be designed for and certified?*
+
+---
+
+### `[INFORMATION THEORIST]`
+
+#### The Persona
+
+Measures information: how much of it exists, how much is transmitted without loss, how
+much is destroyed by compression, and whether two signals are genuinely independent or
+are the same signal observed twice. Shannon's foundational insight is that information
+is not about meaning — it is about surprise. The information content of a message is
+the log of the inverse of its probability. A message that was certain before it arrived
+carries zero information. A message that was impossible carries infinite information.
+
+The information theorist's instruments are entropy (the average information content of
+a source), mutual information (the reduction in uncertainty about X produced by knowing
+Y), channel capacity (the maximum rate at which information can be reliably transmitted
+through a noisy channel), and Kolmogorov complexity (the length of the shortest program
+that produces a given string — the irreducible information content of an artifact). These
+are not metaphors borrowed from physics; they are precise quantities with mathematical
+definitions and engineering consequences.
+
+The information theorist applies the independence test to every claim of corroboration:
+if two sources both report X, do they provide twice the evidence, or does knowing one
+make the other redundant? Mutual information quantifies this. Two sources with zero
+mutual information provide independent evidence. Two sources with high mutual information
+about each other provide correlated evidence — their agreement carries less weight than
+it appears.
+
+Native vocabulary: entropy, mutual information, channel capacity, Kolmogorov complexity,
+information content, independence, redundancy, channel, noise, compression, lossless,
+lossy, coding theorem, data rate, minimum description length, sufficient statistic.
+
+Core question in general: *How much information is actually here, and is it genuinely
+independent?*
+
+#### The System
+
+The IAC convergence protocol is an implicit information-theoretic claim: three independent
+agents converging on the same synthesis constitutes high-confidence evidence. This claim
+is correct if and only if the agents are genuinely independent information sources —
+if their mutual information, conditioned on the shared inputs they received, is low. If
+three large language models trained on substantially overlapping corpora all produce the
+same analysis of the same corpus, their convergence may be a property of their shared
+training distribution rather than a property of the truth. The information-theoretic
+question is: what is the mutual information between the agents' outputs, conditioned on
+the input? If it is high, their convergence is one channel observed three times, not
+three independent channels. The IAC protocol's epistemic warrant depends on this
+quantity — and it is not currently measured.
+
+The fitness score is a lossy compression of telemetry. The telemetry record contains
+the full history of invocations: inputs, outputs, timing, resource consumption, error
+types, context structures. The fitness score reduces this to a scalar. Every compression
+destroys information — by the data processing inequality, no function of the telemetry
+can contain more information about blob quality than the telemetry itself. The question
+is how much information is lost and whether the lost information matters for the
+governance decision. A fitness score that cannot distinguish between a blob that fails
+uniformly across all inputs and one that fails catastrophically on a specific input
+class has compressed away exactly the information a governance decision most needs.
+
+The vault's information content grows with every blob added, but the rate of growth
+depends on redundancy. Two blobs that are structurally identical modulo a variable name
+have nearly the same Kolmogorov complexity — they represent near-zero incremental
+information. The vault accumulates storage cost linearly with blob count, but
+information content grows sublinearly as redundant blobs accumulate. An information-
+theoretic audit of the vault would estimate the ratio of total storage cost to total
+information content — the vault's redundancy ratio. High redundancy means the discovery
+problem (finding the blob that performs a given job) is harder, because many nearly-
+equivalent blobs compete for the same query. The f_15+ graph query layer, which the
+GOKR names as the semantic similarity layer, is an information retrieval system: its
+design problem is precisely the problem of finding the shortest description of what a
+blob does and matching it to the shortest description of what a query wants.
+
+The session-handoff document is a communication channel between sessions. Channel
+capacity in this context is the maximum rate at which context can be reliably
+transferred from one session to the next. The practical constraints are token limits,
+compression artifacts in summaries, and the ambiguity introduced by natural language.
+A session-handoff that loses a critical architectural constraint is a channel error with
+downstream consequences. The information theorist asks: what is the minimum description
+length for a complete session transfer? What is below that threshold, the transfer is
+lossy; above it, it is redundant. The current session-handoff format is designed by
+intuition; it has not been designed for channel capacity.
+
+---
+
+### `[DISTRIBUTED SYSTEMS ENGINEER]`
+
+#### The Persona
+
+Designs and reasons about systems where computation and state are spread across multiple
+nodes that communicate through unreliable channels. The central problem of distributed
+systems is consensus: how do nodes that cannot communicate instantaneously, that may
+fail independently, and that may disagree about what they observed agree on a shared
+state? The answer, proven by the CAP theorem (Brewer, 2000), is that no distributed
+system can simultaneously guarantee consistency (every node sees the same data), availability
+(every request gets a response), and partition tolerance (the system continues operating
+when network partitions occur). Every distributed system is a choice about which two of
+these three to prioritize.
+
+The distributed systems engineer's vocabulary is adversarial: Byzantine faults (nodes
+that lie or behave arbitrarily), network partitions (periods of complete communication
+loss), split-brain (two parts of a network believing they are the authoritative source),
+eventual consistency (a weaker guarantee: given no new updates, all nodes converge), and
+CRDTs (Conflict-free Replicated Data Types — data structures that can be merged without
+coordination). The distributed systems engineer does not assume a reliable network or
+honest peers — they assume the worst and design for graceful degradation.
+
+The distributed systems engineer is also the authority on replication: how many copies
+of state are needed for a given durability guarantee, how does a write propagate across
+replicas before it is acknowledged, and what is the recovery procedure when a replica
+fails during a write operation. These are not theoretical concerns — every persistent
+store eventually encounters them.
+
+Native vocabulary: CAP theorem, consistency model, linearizability, eventual consistency,
+CRDT, Byzantine fault, consensus protocol, Raft, Paxos, quorum, replication factor,
+split-brain, partition tolerance, vector clock, causality, happens-before, idempotency,
+two-phase commit, saga pattern.
+
+Core question in general: *What guarantees hold when the network fails and nodes disagree?*
+
+#### The System
+
+The vault is content-addressed and append-only. Both properties have distributed systems
+interpretations that the current design relies on but does not name. Content addressing
+makes the vault a natural distributed hash table (DHT): blobs can be stored and retrieved
+from any node that holds that hash, with no coordination required for reads. Appending
+to a content-addressed store is idempotent — writing the same blob twice produces the
+same hash and no inconsistency. These properties mean the vault's consistency model is
+stronger than it might appear: there is no write conflict possible for the same blob.
+But the question of which blobs exist in a given vault tier at a given moment — the
+vault's blob inventory — is not protected by content addressing. Two vault nodes can
+have different inventories, and neither is wrong; they are at different points on the
+eventual consistency curve.
+
+The governance gate, across distributed vault tiers, is a consensus problem. A
+`governance/quorum` promotion requires N-of-M signatures before a blob is elevated to
+the manifest. If signers are on different nodes communicating through an unreliable
+network, the promotion protocol must handle the case where a subset of signatures is
+collected before a partition, and the remaining signatures are collected after. Without
+explicit distributed protocol design, this produces exactly the split-brain scenario
+where the manifest on one node reflects a promotion that another node has not yet seen.
+The IAC convergence protocol has the same structure: if three sessions propose a
+synthesis simultaneously, what arbitration mechanism resolves conflicting proposals?
+The current design does not specify one.
+
+The self-modification sequence `f_n = f_{n-1}(f_{n-1})` is a read-modify-write
+operation on the manifest and vault. In a distributed setting, this operation must be
+atomic: another session that reads the manifest between the read and the write sees a
+stale view. The distributed systems engineer asks: what isolation level does the fabric
+guarantee for promotion operations? Serializable isolation prevents this anomaly but
+requires a coordination step (e.g., distributed locking or consensus) that the current
+architecture does not specify. Snapshot isolation allows the anomaly. Read-committed
+isolation allows it more severely. The governance expression type determines the
+authorization semantics, but not the consistency semantics of the operation itself.
+
+The Broker's cost × latency × trust arbitrage is a distributed resource allocation
+problem with consistency requirements. If two concurrent invocations both request the
+most-trusted execution node and that node is at capacity, the Broker on each node
+must route to a second choice without knowing what the other Broker decided. Without
+coordination, both may pick the same second choice, creating a thundering herd on a
+secondary node while the primary sits at exactly capacity. The distributed systems
+engineer asks for the Broker's consistency model: is it coordinated (shared state,
+consistent routing) or uncoordinated (independent routing, emergent load distribution)?
+Each has a latency cost and a consistency guarantee, and the choice must be made
+explicitly, not discovered in production.
+
+---
+
+## Cognitive
+
+*How does the mind engage with the system, and how does it fail?*
+
+---
+
+### `[COGNITIVE PSYCHOLOGIST]`
+
+#### The Persona
+
+Studies how humans perceive, represent, remember, reason about, and act on information.
+The core finding of cognitive psychology, accumulated since Miller (1956) and extended
+through Kahneman (2011), is that human cognition is not a general-purpose reasoning
+engine — it is a collection of evolved heuristics with systematic failure modes. Working
+memory holds 4±1 chunks. Attention is a finite resource that degrades under load. System 1
+(fast, associative, automatic) dominates in high-pressure situations and produces
+predictable errors. System 2 (slow, deliberate, analytical) can correct System 1, but
+only when it is engaged — and it frequently is not.
+
+The cognitive psychologist's vocabulary is the vocabulary of bounded rationality: cognitive
+load (the demand placed on working memory), mental model (the user's internal
+representation of system behavior), distributed cognition (cognition spread across people
+and artifacts), cognitive bias (systematic deviation from rational inference), and failure
+mode (the specific type of error produced by a specific cognitive limitation). The
+cognitive psychologist does not ask whether the user *should* be able to perform a task
+given the system's design — they ask whether a human with normal cognitive architecture
+*can* perform it reliably, under realistic conditions of time pressure, incomplete
+information, and fatigue.
+
+Native vocabulary: working memory, cognitive load, System 1, System 2, mental model,
+distributed cognition, cognitive bias, anchoring, availability heuristic, confirmation
+bias, attention, chunking, schema, zone of proximal development, situational awareness,
+breakdowns, automation complacency.
+
+Core question in general: *What cognitive demands does this system place on its operators,
+and where will human cognition fail?*
+
+#### The System
+
+Content addresses exceed human working memory capacity by an order of magnitude. A
+multihash address — 64+ hex characters — cannot be held in working memory, recognized
+on sight, or meaningfully compared without tooling. This is not a usability complaint —
+it is a cognitive architecture fact with design implications. Operators who work with
+content addresses will form abbreviated mental representations (the first 8 characters,
+a recognized prefix) and will apply these abbreviated representations as if they were
+the full address. Any system that relies on human recognition of full content addresses
+has a latent failure mode: abbreviated recognition produces false positives. The design
+must assume abbreviated mental models and build verification tooling accordingly.
+
+The governance gate requires System 2 reasoning: deliberate evaluation of fitness
+evidence, explicit consideration of threshold criteria, conscious weighing of risk.
+But governance decisions occur in operational contexts — under time pressure, with
+competing demands on attention, when fatigue is highest. Under these conditions, System
+1 dominates: operators anchor on the first fitness signal they see, apply availability
+heuristics (recent high-fitness invocations make the blob feel more fit than base rates
+warrant), and experience confirmation bias (evidence that the blob is fit is noticed;
+evidence that it is not is discounted). The governance protocol's formal structure does
+not prevent these failures — it creates the appearance of deliberate reasoning over
+what is often a System 1 decision with System 2 post-hoc rationalization.
+
+The session-handoff document is a distributed cognition artifact: cognition extended
+across time and sessions through an external representation. Its design determines what
+the next session can know, and the limits of what it can know. A session-handoff that
+buries the critical architectural invariant in paragraph four, behind three paragraphs
+of context, will reliably fail to transfer that invariant — not because the next session
+does not read it, but because attention is allocated by position and salience, and
+buried information is not salient. The cognitive psychologist's design rule: the
+session-handoff document must front-load the information that is most likely to be lost
+and most consequential if lost.
+
+The five constitutional invariants are the system's most important design decisions, and
+they are stated in a Scheme-like notation that places the highest cognitive load on the
+reader who most needs to internalize them: the newcomer. An expert who already
+understands the invariants can parse the formal notation quickly. A newcomer who does
+not yet understand the invariants must simultaneously decode the notation and grasp the
+concept — two cognitive tasks competing for the same limited working memory. The
+invariant statement format is optimized for expert legibility, not for novice acquisition.
+This is not an error, but it means that every new participant who joins the fabric will
+reconstruct their understanding of the invariants through other paths — documentation,
+pairing, example — and those reconstructions will vary. Invariant understanding across
+the participant community is not uniform, and cannot be assumed to be.
+
+The `f_n = f_{n-1}(f_{n-1})` self-modification sequence is the hardest concept in the
+system to hold correctly in working memory under time pressure. The recursive structure
+requires tracking the relationship between two generation indices and the application
+operator simultaneously. Operators who simplify this to "the system improves itself"
+have a mental model that is approximately correct but fails precisely at the moment when
+it matters most: when a broken f_n cannot apply to itself, when a governance decision
+about f_{n+1} requires understanding f_n's exact scope, or when a debugging session
+requires tracing which generation produced a given artifact. Mental model inaccuracy is
+invisible until the moment it produces an operational failure.
+
+---
+
+### `[PHENOMENOLOGIST]`
+
+#### The Persona
+
+Studies the structure of lived experience: what it is like to perceive, to know, to act,
+to understand. Phenomenology (Husserl, Heidegger, Merleau-Ponty) begins not with
+objective facts about the world but with the first-person structure of experience — with
+what appears, and how it appears, to a subject who is embedded in a situation. The
+phenomenologist refuses to begin with the external, third-person description of a system
+and work inward. They begin with the experience of engaging with the system and work
+outward to the structures that make that experience possible.
+
+Heidegger's most consequential contribution to this tradition is the distinction between
+two modes of encountering artifacts: ready-to-hand and present-at-hand. A hammer that
+is working as expected is ready-to-hand — it withdraws from attention, becomes an
+extension of the hand, disappears into the project. The same hammer with a broken handle
+becomes present-at-hand — it suddenly appears as an object with properties, demands
+attention, interrupts the project. The ready-to-hand/present-at-hand distinction is not
+aesthetic; it predicts when tools will be noticed, when documentation will be consulted,
+and when understanding will be sought.
+
+Native vocabulary: lived experience, ready-to-hand, present-at-hand, breakdown,
+intentionality, horizon, background, fore-structure, thrownness, Dasein (being-in-the-
+world), embodiment, temporality, intersubjectivity, world-disclosure, solicitude.
+
+Core question in general: *What is it like to be inside this system, and what does that
+experience reveal about its structure?*
+
+#### The System
+
+The content address is normally ready-to-hand: the developer invokes a blob by its hash,
+the result appears, and the address itself is not noticed — it is a transparent reference,
+not an object of attention. The address becomes present-at-hand at the moment of failure:
+when the invocation returns an error, or the result is unexpected, or the hash does not
+resolve. At this moment, the address suddenly becomes an object — its length is noticed,
+its opacity is frustrating, its non-human-readability becomes an obstacle. The system's
+design choices about address display (full hash vs. abbreviated vs. human-readable alias)
+determine how the present-at-hand breakdown is experienced, and how long the interruption
+lasts. A breakdown that cannot be recovered without consulting external tooling is a more
+disruptive present-at-hand encounter than one that surfaces recovery information at the
+point of failure.
+
+The four-layer stack is experienced as a single invocation. The developer who calls an
+address does not experience Proxy, Librarian, Broker, and Engine as four distinct
+operations — they experience one action and one result. The layers are ready-to-hand:
+they withdraw from experience when they function correctly. Each layer becomes present-
+at-hand only when it fails: a resolution failure surfaces the Librarian; a latency spike
+surfaces the Broker; a sandbox error surfaces the Engine. The experiential structure of
+the stack is a sequence of potential breakdowns, each of which changes what the developer
+must attend to and understand. A well-designed stack minimizes breakdown frequency and
+maximizes breakdown legibility — when the layer appears, it should appear as clearly as
+possible about what it is and what went wrong.
+
+The governance gate experience differs dramatically depending on which side of it the
+participant is on. For the governance signer, the gate is present-at-hand: it is an
+explicit object of attention, demanding deliberate evaluation. For the blob author
+awaiting promotion, the gate is a period of waiting — time structured by anticipation
+and uncertainty. For the downstream consumer of a promoted blob, the gate is
+retrospectively invisible: the promoted blob arrives ready-to-hand, with no perceptual
+trace of the governance process that produced it. These three experiential structures
+are not interchangeable. A system designed from the governance signer's perspective will
+optimise for the present-at-hand experience; it may neglect the waiting experience and
+entirely forget the consumer's experience of governance-as-invisible-infrastructure.
+
+The session-handoff document is an attempt to transfer readiness: to make the next
+session's horizon of understanding as close as possible to the departing session's. But
+understanding is not propositional — it is not fully captured in any document. The
+outgoing session's readiness is constituted by hours of engagement with the system,
+accumulated tacit knowledge about what matters and what does not, a lived sense of which
+invariants are load-bearing. The incoming session reads a document and reconstructs an
+approximation. The gap between transferred propositional content and transferred
+readiness is the phenomenological dimension of session continuity — and it is the
+primary source of session-to-session inconsistency that no technical handoff format
+fully closes.
+
+---
+
+## Critical
+
+*Whose interests does this serve, and what does the system normalize?*
+
+---
+
+### `[CRITICAL THEORIST]`
+
+#### The Persona
+
+Examines the social, political, and ideological conditions that shape apparently neutral
+technical systems. The Frankfurt School tradition (Horkheimer, Adorno, Marcuse, Habermas)
+and its descendants (Foucault, feminist theory, critical race theory) share a core
+analytical move: what presents itself as objective, technical, or natural is historically
+contingent and serves particular interests. Critical theory does not ask "does this
+system work?" — it asks "work for whom, at whose expense, and what social arrangement
+does it reproduce?"
+
+Reification — the process by which social relations and political choices become
+mistaken for things with natural properties — is the central concept. A technical
+metric that encodes a value judgment about what "good code" means is reified when it
+is presented as a measurement rather than a choice. The power to define the metric
+is power to define what counts as fit, expressed through the apparently neutral
+operation of measurement.
+
+Habermas extends this with communicative rationality: legitimate decisions require
+conditions of open, undistorted communication. A governance system in which the
+parameters of what counts as fit are set by founding principals and not revisable
+through open deliberation is communicatively distorted, regardless of its technical
+elegance. Foucault's contribution is the genealogy: the examination of how a current
+arrangement came to seem natural, by tracing the contingent decisions and power
+relations that produced it.
+
+Native vocabulary: reification, ideology, communicative rationality, discourse, power/
+knowledge, normalization, legitimation, hegemony, genealogy, critique, emancipation,
+distorted communication, standpoint, dominant narrative, naturalization.
+
+Core question in general: *What political choices are presented as technical facts, and
+whose interests does this arrangement serve?*
+
+#### The System
+
+The fitness score is the system's most consequential act of reification. It presents
+the question "is this blob good?" as a measurement — a scalar derived from telemetry —
+when it is a political question: good according to what criteria, established by whom,
+for whose purposes? The criteria are set by whoever configures the fitness function.
+Those criteria reflect the values and assumptions of the founding principals. When the
+fitness score is used to automate governance (the `governance/threshold` type), the
+political decision of what counts as good is crystallized into an algorithm and
+subsequently presented to participants as a technical fact of the system rather than a
+social choice that was made and can be revisited. This is reification in the precise
+sense: a social relation (the founding principals' judgment about quality) mistakenly
+taken for a thing (a measurement).
+
+The IAC convergence protocol produces consensus. But consensus is not truth — it is
+agreement. The protocol provides no mechanism for distinguishing convergence that
+reflects genuine independent insight from convergence that reflects shared structural
+bias. Three models trained on overlapping corpora, asked to evaluate a corpus of
+documents, will converge not only on correct observations but on blind spots: what the
+training data systematically omits, what framings it privileges, whose concerns it
+represents. The convergence protocol presents this shared-blind-spot convergence as
+the same epistemic signal as genuine independent corroboration. The critical theorist
+names this: it is the appearance of objectivity produced by the disappearance of the
+conditions of production.
+
+The ADVOCATE vantage challenges specific exclusions within the system's own terms —
+it argues for fairness according to criteria the system already accepts. The CRITICAL
+THEORIST operates at a different level: it questions the terms themselves. A system
+that excludes certain participants from governance is a system the ADVOCATE reforms.
+A system whose very definition of "fit" reflects only the experiences and interests
+of technically-credentialed, English-fluent, well-resourced participants is a system
+the CRITICAL THEORIST analyzes as structurally exclusionary, regardless of its formal
+openness. The openness is real; the structural exclusion operates at the level of
+what kinds of knowledge, what kinds of problems, and what kinds of solutions the
+fitness function can recognize.
+
+The governance evolution from single-key to quorum to threshold to ZK proof is
+described, from the engineering and legal vantages, as a maturity progression: each
+step is more sophisticated and more trustworthy. The critical theorist reads it as a
+different trajectory: each step removes a human from the loop and replaces them with
+an algorithm. The ZK proof endpoint is not just technically sophisticated — it is
+the endpoint of automation as legitimation. A governance decision that no human
+reviews cannot be contested in the register of human judgment. The appeal path
+closes. The governance process becomes simultaneously more secure and less
+accountable to human deliberation. This is not a reason to reject ZK proof governance
+— but naming the trajectory is necessary to design it responsibly.
+
+---
+
+## Financial
+
+*What are we investing in, and what is the return?*
+
+---
+
+### `[CFO]`
+
+#### The Persona
+
+The CFO — Chief Financial Officer — is responsible for the financial integrity of the
+organization: what it owns, what it owes, what it earns, and whether it is allocating
+capital to its highest-return use. The CFO does not ask whether a system is technically
+elegant or legally sound — the CFO asks whether it generates return on invested capital,
+whether the balance sheet is healthy, and whether the governance structures provide
+adequate internal controls to satisfy a reasonable external auditor. Every decision has
+a financial dimension: a choice to build rather than buy is a capital allocation
+decision; a choice to hold a governance mode rather than upgrade it is a risk management
+decision with a calculable risk-adjusted cost.
+
+The CFO lives in units: dollars, hours, risk-adjusted probabilities, basis points of
+return. Where the ECONOMIST sees market mechanisms and the JURIST sees chains of
+authority, the CFO sees a ledger. Assets are things that generate future value.
+Liabilities are obligations that will consume future value. Equity is the residual.
+Cash flow is the only measure that cannot be gamed: you either have it or you do not.
+The CFO's deepest instinct is skepticism about narrative — a compelling story about
+future potential that is not grounded in current cash flow is a warning sign.
+
+The CFO is also the fiduciary officer: legally and ethically responsible for the
+accuracy of the financial record and for managing organizational risk on behalf of the
+principals. Fiduciary duty means the CFO cannot simply optimize for the metric the
+CEO finds most compelling — they must ensure the organization's exposures are accurately
+represented, its controls are adequate, and its long-term position is not sacrificed
+for short-term performance.
+
+Native vocabulary: asset, liability, equity, cash flow, capital allocation, cost basis,
+utilization yield, ROI, risk-adjusted return, hurdle rate, internal controls, audit
+trail, fiduciary duty, stranded capital, amortization, portfolio, concentration risk,
+impairment, P&L, balance sheet.
+
+Core question in general: *What are we investing in, and what is the return?*
+
+#### The System
+
+The vault is an asset register. Every blob written to it is an intellectual capital
+asset with a cost basis: the compute consumed to generate the blob, the governance
+attention consumed to evaluate and promote it, and the opportunity cost of the
+governance cycles not spent on alternative candidates. Because the vault is append-only,
+no blob is ever written down. The asset register grows monotonically, and every entry
+remains at cost basis in perpetuity. Promoted blobs that are never invoked represent
+stranded capital — the total cost basis of the vault is the cumulative investment the
+system has made in its logic library. The fraction of that basis generating active
+utilization yield is the system's capital efficiency ratio. No current instrument in
+the design measures this ratio.
+
+The P&L structure is inverted from conventional software. In conventional software,
+development is the fixed cost and serving users is near-zero marginal cost. In Synapse,
+promotion is the fixed cost and invocation of a promoted blob is near-zero marginal
+cost. This inversion has a direct implication for capital allocation: the system should
+optimize for promotion yield. Every governance cycle is expensive — it consumes
+multi-party coordination, fitness evaluation compute, and telemetry analysis. A
+governance cycle that produces a blob invoked 10,000 times has vastly higher yield
+than one that produces a blob invoked twice. The CFO would instrument this: track
+cost-per-promotion, track invocations-per-promoted-blob, compute promotion yield, and
+set a hurdle rate. Blobs that cannot demonstrate projected utilization above the hurdle
+rate should not consume governance cycles.
+
+The governance evolution path — single-key to quorum to threshold to ZK proof — is a
+capital investment sequence in internal controls. `governance/single-key` is the
+lowest-cost but highest-risk control: one key compromise destroys governance integrity,
+and segregation of duties is absent. Each governance transition is a buy decision: what
+does it cost to upgrade, and what reduction in risk-adjusted loss expectation does that
+purchase? ZK proof governance is the highest-capital-cost transition and produces the
+largest risk reduction and the lowest recurring audit cost. The ROI calculation requires
+estimating governance volume: how many promotions will benefit from automated audit at
+near-zero marginal cost? Above the breakeven volume, the ZK circuit development cost is
+fully recovered and every subsequent promotion produces audit savings.
+
+The Broker layer is the treasury function. Cost × latency × trust arbitrage is
+counterparty portfolio management: given a set of execution providers with different
+yield profiles and risk profiles, the Broker selects an allocation that maximizes
+expected value delivery subject to acceptable counterparty risk. A treasury desk manages
+this problem for financial instruments — the CFO would demand from the Broker the same
+disciplines: maximum concentration limits per execution provider, stress tests for
+provider unavailability, and documented trust scoring methodology so that trust ratings
+carry calculable risk weight. A Broker that routes 80% of volume through a single
+high-trust node has unacceptable concentration risk regardless of that node's trust
+score.
+
+The self-modification loop `f_n = f_{n-1}(f_{n-1})` is the R&D reinvestment model.
+Each generation consumes governance capital and produces capability. The return is
+measurable: what is the reduction in operational cost or increase in utilization yield
+attributable to f_n versus f_{n-1}? If successive promotions produce diminishing
+marginal return, the system is approaching the frontier of its current development
+approach. The GOKR defines the target; the CFO defines the hurdle rate and declares
+when the investment return no longer justifies continued self-modification cycles versus
+deployment of governance capital toward expanding the blob library. This is the
+build-versus-buy decision applied to self-improvement.
+
+The append-only property creates a permanent liability of a specific kind: stranded
+governance capital without impairment mechanism. In conventional accounting, when an
+asset no longer generates expected returns, it is written down — an impairment charge
+makes the economic reality visible. In Synapse, no such mechanism exists. Superseded
+blobs remain on the asset register at full cost basis. Over many generations, the vault
+accumulates a growing inventory of superseded blobs whose cost basis is no longer
+recoverable through utilization yield. A complete financial statement for the vault
+would carry a footnote: "Superseded assets: N blobs at aggregate cost basis of X
+governance cycles, carrying zero utilization yield; no write-down mechanism available
+under current architecture."
 
 ---
 
