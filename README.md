@@ -111,7 +111,7 @@ f(unknown) → f(undefined)
 Non-council lineage      Council lineage
 (solo agent)             (governed, multi-agent)
      │                         │
-  f_0–f_2                f_0–f_12 (current: v1.12.0)
+  f_0–f_2                f_0–f_14 (current: v1.14.0)
                          f_n = f_{n-1}(f_{n-1})
 ```
 
@@ -130,7 +130,9 @@ Non-council lineage      Council lineage
 | `v1.9.0` | `f_9 = f_8(f_8)` | Adversarial test authorship — two-model pipeline |
 | `v1.10.0` | `f_10 = f_9(f_9)` | Guided mutation goals from audit log trends |
 | `v1.11.0` | `f_11 = f_10(f_10)` | Goal/OKR blob type + GOKR execution engine |
-| `v1.12.0` | `f_12 = f_11(f_11)` | Latest stable (current) |
+| `v1.12.0` | `f_12 = f_11(f_11)` | blake3 canonical hash; multihash address format foundation |
+| `v1.13.0` | `f_13 = f_12(f_12)` | Engine-as-expression: execution policy moves into a promotable vault expression |
+| `v1.14.0` | `f_14 = f_13(f_13)` | logic/engine type: honest kernel trust boundary; exec() allowed by type, not naming trick (current) |
 
 Full lineage: [docs/experiments.md](docs/experiments.md) · Full decision record: [docs/adr/](docs/adr/)
 
@@ -166,7 +168,7 @@ cd synapse
 cat λ.md
 
 # Check out the latest council release to run the fabric
-git checkout council/f_12
+git checkout council/f_14
 
 # Bootstrap the system
 python seed.py promote manifest.json
