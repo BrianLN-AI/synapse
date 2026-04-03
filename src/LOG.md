@@ -109,3 +109,71 @@
 - **Phase 2:** Self-Distillation - autonomous pattern recognition and blob spawning.
 - **Phase 3:** Feedback Loops - closing the gap between 'Action' and 'Reflection'.
 - **Final:** Storage Abstraction (VaultAdapter) and Input Validation/Security Hardening.
+# Synapse Development Log (Continued)
+
+## f_6: Living Logic - Native Bridges & Recursion
+**Version:** 1.6.0
+**Focus:** Native cross-process communication and recursive virtualization.
+
+### Narrative
+- **Attempted:** Replace brittle simulation hacks with robust native transport and enable nested fabrics.
+- **Action:** Created `js_bridge.js` for structured Node.js execution. Implemented the 'Matryoshka Leap', allowing Linkers to run as Blobs inside other Linkers with private vaults.
+- **Result:** Successfully verified stateful JS execution and isolated sub-fabric initialization.
+- **Learnings:** Formalizing the bridge between runtimes reduces escaping issues and enables complex data sharing. Recursion is the path to infinite modularity.
+
+### Key Milestones
+- **CAP-BARE-018:** Native RPC Transport - the JS Bridge.
+- **CAP-BARE-019:** Discovery Protocol - runtime capability queries.
+- **CAP-BARE-020:** The Matryoshka Leap - recursive virtualization.
+
+---
+
+## f_7: Temporal Fabric - The Self-Hosting BIOS
+**Version:** 1.7.0
+**Focus:** Solving the L0 mutation problem and enabling timeline management.
+
+### Narrative
+- **Attempted:** Move the Linker's brain into the vault to allow autonomous BIOS evolution.
+- **Action:** Shrunk the physical `seed.py` into a tiny Bootloader. Moved the Linker logic into an immutable Blob. Implemented `branch()` and `rollback()`.
+- **Result:** Successfully verified the system booting from a vault-resident brain and performing temporal rewinds.
+- **Learnings:** Moving the BIOS into the vault completes the content-addressed circle. The brain is now as versionable as its tools.
+
+### Key Milestones
+- **CAP-BARE-021:** Self-Hosting BIOS - decoupling Bootloader from Linker Brain.
+- **CAP-BARE-022:** Temporal Branching - isolated fabric root forking.
+- **CAP-BARE-023:** Temporal Rewind - system-wide root rollback.
+
+---
+
+## f_8: Synaptic Convergence - Pluggable Logic & Attestation
+**Version:** 1.8.0
+**Focus:** Architectural decompression and context-aware security.
+
+### Narrative
+- **Attempted:** Secure the evolution loop and remove higher-order logic from the BIOS.
+- **Action:** Stripped `diff` logic from the Linker, moving it to a pluggable capability. Implemented the 'Attestation Layer' using conditional signatures.
+- **Result:** Verified that administrative primitives are only injected if a Blob has a valid, context-matching attestation (e.g. matching `trace_id`).
+- **Learnings:** Authority must be 'Just-in-Time'. Verified attestations are the only way to secure a distributed self-evolving mesh.
+
+### Key Milestones
+- **CAP-BARE-024:** Architectural Decompression - pluggable diff/merge.
+- **CAP-BARE-025:** Synthetic Refactorer - merging requirements into code.
+- **CAP-BARE-026:** Attestation Layer - context-aware least-privilege security.
+
+---
+
+## f_11: The Verified Fabric - ZK-Proofs & Resilience
+**Version:** 11.0.0-Stable
+**Focus:** Cryptographic compute integrity and decentralized resilience.
+
+### Narrative
+- **Attempted:** Implement provable compute and eliminate the local system root as a single point of failure.
+- **Action:** Implemented a structurally real ZK-Proof loop (Prover capability). Added Ed25519 cryptographic identities for all nodes. Hardened the Bootloader with Identity-Aware Gossip Consensus.
+- **Result:** Successfully verified the full High-Integrity loop: Request -> Arbitrage -> Proving -> Verification -> Binding. Verified system recovery via Gossip after local root deletion.
+- **Learnings:** Integrity is the trust-anchor of a distributed mesh. Resilience requires verified redundancy and a 'Smoke-Test' gate to prevent bad evolutions.
+
+### Key Milestones
+- **CAP-BARE-027:** Provable Compute - structurally real ZK-Proof loop.
+- **CAP-BARE-028:** Sovereign Identity - persistent Ed25519 node keys.
+- **CAP-BARE-029:** Resilient Booting - Identity-aware Gossip consensus.
+- **CAP-BARE-030:** Safe Promotion - Mandatory smoke-test gate.
