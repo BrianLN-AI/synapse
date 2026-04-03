@@ -142,6 +142,8 @@ def record_feedback(logic_hash, outcome, confidence=1.0, reviewer="caller", revi
 
 DISCOVERY_PAYLOAD = """\
 import json
+import urllib.request
+import blake3 as _blake3
 from pathlib import Path
 
 vault_dir = Path(context.get("vault_dir", "./blob_vault"))
@@ -150,11 +152,34 @@ raw_hash  = context["hash"]
 target_hash = raw_hash.split(":", 1)[1] if ":" in raw_hash else raw_hash
 blob_path = vault_dir / target_hash
 
-if not blob_path.exists():
-    raise FileNotFoundError(f"Discovery L1: {raw_hash} not found in vault")
-
-log(f"discovery: resolved {target_hash[:8]}... from L1")
-result = json.loads(blob_path.read_text())
+if blob_path.exists():
+    log(f"discovery: resolved {target_hash[:8]}... from L1")
+    result = json.loads(blob_path.read_text())
+else:
+    vault_url_remote = context.get("vault_url_remote", "").rstrip("/")
+    if vault_url_remote:
+        try:
+            url  = f"{vault_url_remote}/{target_hash}"
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                data = resp.read()
+            # Content-addressed verification: hash must match the address
+            actual = _blake3.blake3(data).hexdigest()
+            if actual != target_hash:
+                raise ValueError(
+                    f"Discovery remote: hash mismatch for {target_hash[:8]}... "
+                    f"(got {actual[:8]}...)"
+                )
+            # Cache to local vault
+            vault_dir.mkdir(parents=True, exist_ok=True)
+            blob_path.write_bytes(data)
+            log(f"discovery: fetched {target_hash[:8]}... from remote, cached locally")
+            result = json.loads(data.decode("utf-8"))
+        except (urllib.error.URLError, ValueError) as exc:
+            raise FileNotFoundError(
+                f"Discovery: {raw_hash} not found in L1 or remote ({exc})"
+            ) from exc
+    else:
+        raise FileNotFoundError(f"Discovery L1: {raw_hash} not found in vault")
 """
 
 # ---------------------------------------------------------------------------

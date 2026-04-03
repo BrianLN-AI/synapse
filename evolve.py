@@ -14,7 +14,7 @@ Cycle per blob (infrastructure or capability):
   5. Test:      call `ai devstral` to generate adversarial test/case blobs per candidate
                 Promote test cases; run test suite. Candidates failing any test discarded.
   6. Benchmark: benchmark all passing candidates vs current; take best winner
-  7. Promote:   best winner → Council Approval → manifest update (v1.16.0)
+  7. Promote:   best winner → Council Approval → manifest update (v1.17.0)
 
 run_all() iterates ALL logic/python labels in the manifest.
 evolve_engine() is a separate governed upgrade path for the logic/engine blob —
@@ -1357,10 +1357,12 @@ log(f"telemetry-reader-v7: {len(result)} blob(s), reviewer-trust-weighted feedba
 # over-constraint that broke resolution of non-logic blobs (telemetry, feedback, etc.).
 DISCOVERY_V8 = """\
 import json
+import urllib.request
+import blake3 as _blake3
 from pathlib import Path
 
-vault_dir = Path(context.get("vault_dir", "./blob_vault"))
-raw_hash  = context["hash"]
+vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
+raw_hash    = context["hash"]
 # Normalize multihash address (e.g. "blake3:<hex>") to bare hex for vault lookup
 target_hash = (raw_hash.split(":", 1)[1] if ":" in raw_hash else raw_hash).lower()
 
@@ -1370,19 +1372,41 @@ if len(target_hash) != 64 or not all(c in "0123456789abcdef" for c in target_has
 if not vault_dir.is_dir():
     raise FileNotFoundError(f"Discovery v8: vault directory not found: {vault_dir}")
 
-try:
-    result = json.loads((vault_dir / target_hash).read_text())
-    log(f"discovery-v8: resolved {target_hash[:8]}...")
-except FileNotFoundError:
+blob_path = vault_dir / target_hash
+
+if blob_path.exists():
+    result = json.loads(blob_path.read_text())
+    log(f"discovery-v8: resolved {target_hash[:8]}... from L1")
+else:
+    # L2 local tier
     vault_dir_l2 = Path(context.get("vault_dir_l2", "./blob_vault_l2"))
-    if vault_dir_l2.is_dir():
-        try:
-            result = json.loads((vault_dir_l2 / target_hash).read_text())
-            log(f"discovery-v8: L2 fallback {target_hash[:8]}...")
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Discovery v8: {target_hash} not found in L1 or L2")
+    if vault_dir_l2.is_dir() and (vault_dir_l2 / target_hash).exists():
+        result = json.loads((vault_dir_l2 / target_hash).read_text())
+        log(f"discovery-v8: L2 fallback {target_hash[:8]}...")
     else:
-        raise FileNotFoundError(f"Discovery v8: {target_hash} not found in vault")
+        # Remote tier — fetch and verify content-addressed hash
+        vault_url_remote = context.get("vault_url_remote", "").rstrip("/")
+        if vault_url_remote:
+            try:
+                url = f"{vault_url_remote}/{target_hash}"
+                with urllib.request.urlopen(url, timeout=5) as resp:
+                    data = resp.read()
+                actual = _blake3.blake3(data).hexdigest()
+                if actual != target_hash:
+                    raise ValueError(
+                        f"Discovery v8: hash mismatch for {target_hash[:8]}... "
+                        f"(got {actual[:8]}...)"
+                    )
+                vault_dir.mkdir(parents=True, exist_ok=True)
+                blob_path.write_bytes(data)
+                log(f"discovery-v8: fetched {target_hash[:8]}... from remote, cached locally")
+                result = json.loads(data.decode("utf-8"))
+            except (urllib.error.URLError, ValueError) as exc:
+                raise FileNotFoundError(
+                    f"Discovery v8: {target_hash} not found in L1, L2, or remote ({exc})"
+                ) from exc
+        else:
+            raise FileNotFoundError(f"Discovery v8: {target_hash} not found in L1 or L2")
 """
 
 # Planning v8: explicit burstiness penalty
@@ -1968,7 +1992,7 @@ def evolve_engine(reviewer: str = "evolve") -> dict:
         label="engine",
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.16.0",
+        version="1.17.0",
     )
     # Invalidate engine cache — next invoke() will load the promoted engine
     seed._ENGINE      = None
@@ -2143,7 +2167,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.16.0",
+        version="1.17.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -2193,7 +2217,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         results.append(r)
 
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_16 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.16.0")
+    print(f"\n  f_17 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.17.0")
     return results
 
 
