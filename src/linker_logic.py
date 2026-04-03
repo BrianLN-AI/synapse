@@ -328,8 +328,31 @@ def main():
         else:
             if linker.tally(prop_id) < min_sigs: print(f"FAILED: Consensus not reached for {prop_id}"); sys.exit(1)
             manifest = json.loads(prop_path.read_text())
-        for name, versions in manifest.get("capabilities", {}).items():
-            for ver, h in versions.items(): adapter.read(h)
+        
+        # --- f_11: SMOKE TEST GATE ---
+        print("Promote: Initiating pre-promotion smoke test...", file=sys.stderr)
+        try:
+            # 1. Verify all blobs exist
+            for name, versions in manifest.get("capabilities", {}).items():
+                for ver, h in versions.items(): adapter.read(h)
+            
+            # 2. Simulate execution using the new manifest
+            # We don't update manifest.hash yet! We just test the resolution logic.
+            test_linker = Linker(adapter)
+            # Override resolve_capability to use the proposed manifest
+            def mock_resolve(name, version="stable"): return manifest.get("capabilities", {}).get(name, {}).get(version)
+            test_linker.resolve_capability = mock_resolve
+            
+            test_res = test_linker.invoke_capability("proxy", {"intent": "SMOKE_TEST"})
+            if test_res.get("status") != "success":
+                raise Exception(f"Smoke test failed: {test_res.get('error')}")
+            
+            print("Promote: Smoke test PASSED.", file=sys.stderr)
+        except Exception as e:
+            print(f"FAILED: Pre-promotion verification failed: {str(e)}", file=sys.stderr)
+            sys.exit(1)
+
+        # --- ATOMIC SWAP ---
         h = adapter.write(json.dumps(manifest)); adapter.update_manifest_hash(h); print(f"Successfully promoted: {h}")
 
 if __name__ == "__main__": main()
