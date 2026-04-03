@@ -892,6 +892,60 @@ def lookup_bridge(vault_address: str) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
+# Federation — peer management (ADR-016)
+# ---------------------------------------------------------------------------
+
+def register_peer(url: str) -> None:
+    """
+    Register a federation peer URL in manifest["federation"]["peers"].
+
+    Idempotent: adding the same URL twice results in one entry.
+    Peers are tried in order during discovery after L1, L2, and vault_url_remote.
+    """
+    url = url.rstrip("/")
+    manifest = load_manifest()
+    fed = manifest.setdefault("federation", {"peers": []})
+    if url not in fed["peers"]:
+        fed["peers"].append(url)
+    manifest["federation"] = fed
+    _write_manifest(manifest)
+    with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "event":      "register_peer",
+            "url":        url,
+            "timestamp":  time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }) + "\n")
+
+
+def list_peers() -> list[str]:
+    """Return the list of registered federation peer URLs from the manifest."""
+    return load_manifest().get("federation", {}).get("peers", [])
+
+
+def remove_peer(url: str) -> bool:
+    """
+    Remove a federation peer URL from the manifest.
+
+    Returns True if the URL was present and removed, False if not found.
+    """
+    url = url.rstrip("/")
+    manifest = load_manifest()
+    peers = manifest.get("federation", {}).get("peers", [])
+    if url not in peers:
+        return False
+    peers.remove(url)
+    manifest.setdefault("federation", {})["peers"] = peers
+    _write_manifest(manifest)
+    with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "event":      "remove_peer",
+            "url":        url,
+            "timestamp":  time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }) + "\n")
+    return True
+
+
+# ---------------------------------------------------------------------------
 
 def promote_test_cases(
     label: str,

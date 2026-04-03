@@ -14,7 +14,7 @@ Cycle per blob (infrastructure or capability):
   5. Test:      call `ai devstral` to generate adversarial test/case blobs per candidate
                 Promote test cases; run test suite. Candidates failing any test discarded.
   6. Benchmark: benchmark all passing candidates vs current; take best winner
-  7. Promote:   best winner → Council Approval → manifest update (v1.18.0)
+  7. Promote:   best winner → Council Approval → manifest update (v1.19.0)
 
 run_all() iterates ALL logic/python labels in the manifest.
 evolve_engine() is a separate governed upgrade path for the logic/engine blob —
@@ -1409,6 +1409,83 @@ else:
             raise FileNotFoundError(f"Discovery v8: {target_hash} not found in L1 or L2")
 """
 
+DISCOVERY_V9 = """\
+import json
+import urllib.request
+import blake3 as _blake3
+from pathlib import Path
+
+vault_dir   = Path(context.get("vault_dir", "./blob_vault"))
+raw_hash    = context["hash"]
+# Normalize multihash address (e.g. "blake3:<hex>") to bare hex for vault lookup
+target_hash = (raw_hash.split(":", 1)[1] if ":" in raw_hash else raw_hash).lower()
+
+if len(target_hash) != 64 or not all(c in "0123456789abcdef" for c in target_hash):
+    raise ValueError(f"Discovery v9: invalid hash {raw_hash!r} — expected 64 hex chars or <func>:<hex>")
+
+if not vault_dir.is_dir():
+    raise FileNotFoundError(f"Discovery v9: vault directory not found: {vault_dir}")
+
+blob_path = vault_dir / target_hash
+
+def _fetch_and_verify(url, target_hash, vault_dir, blob_path, source_label):
+    with urllib.request.urlopen(url, timeout=5) as resp:
+        data = resp.read()
+    actual = _blake3.blake3(data).hexdigest()
+    if actual != target_hash:
+        raise ValueError(
+            f"Discovery v9: hash mismatch from {source_label} for {target_hash[:8]}... "
+            f"(got {actual[:8]}...)"
+        )
+    vault_dir.mkdir(parents=True, exist_ok=True)
+    blob_path.write_bytes(data)
+    return json.loads(data.decode("utf-8"))
+
+if blob_path.exists():
+    result = json.loads(blob_path.read_text())
+    log(f"discovery-v9: resolved {target_hash[:8]}... from L1")
+else:
+    # L2 local tier
+    vault_dir_l2 = Path(context.get("vault_dir_l2", "./blob_vault_l2"))
+    if vault_dir_l2.is_dir() and (vault_dir_l2 / target_hash).exists():
+        result = json.loads((vault_dir_l2 / target_hash).read_text())
+        log(f"discovery-v9: L2 fallback {target_hash[:8]}...")
+    else:
+        resolved = False
+
+        # Primary remote tier (single URL, backward-compat with f_17)
+        vault_url_remote = context.get("vault_url_remote", "").rstrip("/")
+        if vault_url_remote and not resolved:
+            try:
+                url = f"{vault_url_remote}/{target_hash}"
+                result = _fetch_and_verify(url, target_hash, vault_dir, blob_path, "remote")
+                log(f"discovery-v9: fetched {target_hash[:8]}... from remote, cached locally")
+                resolved = True
+            except (urllib.error.URLError, ValueError):
+                pass  # fall through to federation peers
+
+        # Federation peers tier — try each peer in order
+        if not resolved:
+            peers = context.get("vault_federation_peers", [])
+            last_exc = None
+            for peer_url in peers:
+                try:
+                    url = f"{peer_url.rstrip('/')}/{target_hash}"
+                    result = _fetch_and_verify(url, target_hash, vault_dir, blob_path, f"peer:{peer_url}")
+                    log(f"discovery-v9: fetched {target_hash[:8]}... from federation peer {peer_url}, cached locally")
+                    resolved = True
+                    break
+                except (urllib.error.URLError, ValueError) as exc:
+                    last_exc = exc
+                    continue
+
+            if not resolved:
+                detail = f" ({last_exc})" if last_exc else ""
+                raise FileNotFoundError(
+                    f"Discovery v9: {target_hash} not found in L1, L2, remote, or {len(peers)} federation peer(s){detail}"
+                )
+"""
+
 # Planning v8: explicit burstiness penalty
 # Improvement: v7 uses p95_latency_ms as the latency input (vs avg in v6), which
 # penalises bursty blobs.  v8 makes the burstiness penalty explicit and tunable:
@@ -1992,7 +2069,7 @@ def evolve_engine(reviewer: str = "evolve") -> dict:
         label="engine",
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.18.0",
+        version="1.19.0",
     )
     # Invalidate engine cache — next invoke() will load the promoted engine
     seed._ENGINE      = None
@@ -2167,7 +2244,7 @@ def evolve_one(label: str, reviewer: str = "evolve") -> dict:
         label=label,
         blob_hashes=[best_hash],
         council_approval_hash=approval,
-        version="1.18.0",
+        version="1.19.0",
     )
     print(f"  promoted  manifest.hash={manifest_hash[:16]}...")
     return {
@@ -2217,7 +2294,7 @@ def run_all(reviewer: str = "evolve") -> list[dict]:
         results.append(r)
 
     promoted = [r for r in results if r["outcome"] == "promoted"]
-    print(f"\n  f_18 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.18.0")
+    print(f"\n  f_19 complete. {len(promoted)}/{len(results)} blobs promoted → manifest v1.19.0")
     return results
 
 
