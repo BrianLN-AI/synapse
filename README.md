@@ -35,7 +35,7 @@ Three metaphors guide the design:
 
 Two parallel experiment lineages evolve from the same shared base:
 
-```
+```text
 [tag: unknown]  →  [tag: undefined]
                          │
               ┌──────────┴──────────────┐
@@ -200,7 +200,7 @@ docker run --rm -it \
 
 ## 📁 Repository Structure
 
-```
+```text
 synapse/
 ├── seed.py              # The Linker — CLI + MCP Server entry point
 ├── manifest.json        # Layer hash registry (l1–l4)
@@ -327,6 +327,7 @@ python seed.py promote manifest.json
 
 - **Do not run with `--yolo` or blindly invoke untrusted hashes.** Always verify blob provenance.
 - **Run inside Docker** (or a locked-down VM). Example minimal invocation:
+
   ```bash
   docker run --rm -it \
     --network none \
@@ -336,6 +337,7 @@ python seed.py promote manifest.json
     -v "$(pwd)/blob_vault:/app/blob_vault:ro" \
     python:3.12-slim python seed.py invoke <hash>
   ```
+
 - **Use least privilege.** Run as a non-root user (`--user 1000:1000`).
 - **Restrict network egress** using Docker `--network none` or firewall rules (`iptables`, `nftables`).
 - **Mount blob_vault read-only** when not actively writing new blobs.
@@ -356,6 +358,7 @@ python seed.py promote manifest.json
 **Last updated:** 2026-04-03 02:12 UTC
 
 ### Branches
+
 - `copilot/update-documentation-experiment-lineages`
 - `council/f_0`
 - `council/f_1`
@@ -388,6 +391,7 @@ python seed.py promote manifest.json
 - `main`
 
 ### Tags
+
 - `v1.13.0`
 - `v1.12.0`
 - `v1.11.0`
@@ -437,4 +441,4 @@ All rights are assumed to be reserved by the author(s) until a license is added.
 
 ---
 
-*"Logic exists in the Intermezzo — the space between movement."*
+"Logic exists in the Intermezzo — the space between movement."
