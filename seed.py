@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 seed.py — D-JIT Logic Fabric Kernel
-f_16: multihash address format (ADR-015).
+f_18: hash-bridge expression (ADR-015 §hash-bridge).
 
 Kernel invariants:
   - vault: _raw_get + put (content-addressed store)
@@ -237,6 +237,68 @@ def _invoke_kernel(content_hash: str, context: dict | None = None) -> Any:
 
     _record_telemetry_kernel(canonical, elapsed_ms, memory_kb, log_lines, None)
     return scope["result"]
+
+
+# ---------------------------------------------------------------------------
+# HASH-BRIDGE — cross-function address linkage (ADR-015)
+# ---------------------------------------------------------------------------
+
+def put_bridge(
+    vault_address: str,
+    zk_address: str,
+    proof: str | None = None,
+) -> str:
+    """
+    Store a meta/hash-bridge expression linking a vault address (blake3) to a
+    ZK address (poseidon or other circuit-friendly hash).
+
+    The bridge makes the relationship explicit and auditable.  The proof slot
+    is reserved for a ZK proof that both addresses hash the same content; it
+    may be None until ZK infrastructure is wired in.
+
+    Returns the blake3:<hex> address of the bridge blob itself.
+    """
+    record = {
+        "vault_address": _to_multihash(_to_bare_hex(vault_address)),
+        "zk_address":    zk_address,
+        "proof":         proof,
+    }
+    return put("meta/hash-bridge", json.dumps(record, sort_keys=True))
+
+
+def resolve_bridge(address: str) -> dict | None:
+    """
+    Given a vault or ZK address, return the meta/hash-bridge blob that links
+    it to its counterpart, or None if no bridge exists.
+
+    Scans the vault for meta/hash-bridge blobs matching either address field.
+    Returns the parsed bridge record (not the envelope), or None.
+    """
+    bare = _to_bare_hex(address)
+    canonical = _to_multihash(bare)
+
+    for blob_path in VAULT_DIR.iterdir():
+        if not blob_path.is_file():
+            continue
+        try:
+            envelope = json.loads(blob_path.read_text())
+        except Exception:
+            continue
+        if envelope.get("type") != "meta/hash-bridge":
+            continue
+        try:
+            record = json.loads(envelope["payload"])
+        except Exception:
+            continue
+        # Match on either the vault address or the zk address
+        if (
+            _to_bare_hex(record.get("vault_address", "")) == bare
+            or _to_bare_hex(record.get("zk_address", ""))  == bare
+            or record.get("vault_address") == canonical
+            or record.get("zk_address")    == address
+        ):
+            return record
+    return None
 
 
 # ---------------------------------------------------------------------------

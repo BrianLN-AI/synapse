@@ -141,6 +141,28 @@ def _pass_static(blob_hash: str, blob: dict) -> None:
             if kr.get("direction") not in valid_directions:
                 raise ReviewError("StaticAnalysis",
                                   f"goal/okr key_result[{i}] direction must be one of {sorted(valid_directions)}")
+    # meta/hash-bridge: validate required fields and address formats
+    if blob["type"] == "meta/hash-bridge":
+        try:
+            record = json.loads(blob["payload"])
+        except Exception as e:
+            raise ReviewError("StaticAnalysis", f"meta/hash-bridge payload is not valid JSON: {e}") from e
+        for field in ("vault_address", "zk_address"):
+            addr = record.get(field)
+            if not addr or not isinstance(addr, str) or not addr.strip():
+                raise ReviewError("StaticAnalysis",
+                                  f"meta/hash-bridge missing or empty '{field}' field")
+        # vault_address must be a valid blake3 multihash address
+        vault_addr = record["vault_address"]
+        bare = vault_addr.split(":", 1)[1] if ":" in vault_addr else vault_addr
+        if len(bare) != 64 or not all(c in "0123456789abcdef" for c in bare.lower()):
+            raise ReviewError("StaticAnalysis",
+                              f"meta/hash-bridge vault_address must be blake3:<hex>: {vault_addr!r}")
+        # proof must be None/null or a non-empty string
+        proof = record.get("proof")
+        if proof is not None and (not isinstance(proof, str) or not proof.strip()):
+            raise ReviewError("StaticAnalysis",
+                              "meta/hash-bridge proof must be null or a non-empty string")
 
 
 def _pass_safety(blob_hash: str, blob: dict) -> None:
@@ -805,6 +827,70 @@ def promote_contract(
 
 # ---------------------------------------------------------------------------
 # Test Case Promotion (f_9)
+# ---------------------------------------------------------------------------
+# Hash-Bridge Promotion
+# ---------------------------------------------------------------------------
+
+def promote_bridge(
+    bridge_hash: str,
+    council_approval_hash: str,
+    version: str | None = None,
+) -> str:
+    """
+    Promote a meta/hash-bridge expression to the manifest.
+
+    The bridge is stored under manifest["bridges"][vault_address] so it can
+    be looked up by either the vault or ZK address at query time.
+
+    Steps:
+      1. Triple-Pass Review (StaticAnalysis validates bridge structure)
+      2. Verify Council Approval covers the bridge blob
+      3. Update manifest["bridges"] with the bridge hash
+      4. Write Audit Log entry
+    """
+    blob = triple_pass_review(bridge_hash)   # raises ReviewError on failure
+    approval = _verify_council_approval(council_approval_hash, [bridge_hash])
+
+    record     = json.loads(blob["payload"])
+    vault_addr = record["vault_address"]
+
+    manifest = load_manifest()
+    if version:
+        manifest["version"] = version
+    manifest["promoted_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    manifest.setdefault("bridges", {})[vault_addr] = bridge_hash
+
+    new_hash = _write_manifest(manifest)
+    _write_audit({
+        "event":                 "promote_bridge",
+        "timestamp_utc":         manifest["promoted_at"],
+        "vault_address":         vault_addr,
+        "zk_address":            record.get("zk_address"),
+        "bridge_hash":           bridge_hash,
+        "council_approval_hash": council_approval_hash,
+        "council_reviewer_hash": approval.get("reviewer_hash"),
+        "manifest_hash":         new_hash,
+        "version":               manifest.get("version"),
+    })
+    return new_hash
+
+
+def lookup_bridge(vault_address: str) -> dict | None:
+    """
+    Return the promoted meta/hash-bridge record for a vault address, or None.
+    Reads from manifest["bridges"].
+    """
+    manifest   = load_manifest()
+    bridge_hash = manifest.get("bridges", {}).get(vault_address)
+    if not bridge_hash:
+        return None
+    try:
+        blob   = seed._raw_get(bridge_hash)
+        return json.loads(blob["payload"])
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 
 def promote_test_cases(

@@ -279,7 +279,7 @@ BOOTSTRAP_REVIEWER_PAYLOAD = json.dumps({
     "description":      "Bootstrap reviewer — explicit trust root for the f_0 closure. "
                         "Self-grounding; no prior approver exists.",
     "authorized_types": ["logic/python", "logic/engine", "feedback/outcome", "council/reviewer",
-                         "contract/definition", "test/case", "adr/decision"],
+                         "contract/definition", "test/case", "adr/decision", "meta/hash-bridge"],
     "trust_weight":     1.0,
     "criteria":         "f_0 bootstrapped blobs verified by BIOS",
 }, sort_keys=True)
