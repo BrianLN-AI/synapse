@@ -101,7 +101,7 @@ async function handleExecute(code: string): Promise<ExecuteResult> {
       getLabel: async (n: string) => await world.getLabel(n),
       setLabel: async (n: string, h: string) => await world.setLabel(n, h),
       call: async (verbHash: string, nodeHash: string) => await arbiter.message(verbHash, nodeHash),
-      log: (...args: any[]) => console.log('[FABRIC]', ...args),
+      log: (...args: any[]) => console.error('[FABRIC]', ...args),
     };
     const ai = {
       inference: async (prompt: string) => {
@@ -148,7 +148,17 @@ async function main() {
         
         let result: any;
         
-        if (method === 'tools/list') {
+        if (method === 'initialize') {
+          result = {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: {}
+            },
+            serverInfo: { name: 'synapse-codemode', version: '1.0.0' }
+          };
+        } else if (method === 'notifications/initialized') {
+          continue;
+        } else if (method === 'tools/list') {
           result = {
             tools: [
               {
@@ -163,14 +173,15 @@ async function main() {
               }
             ]
           };
-        } else if (method === 'tools/call') {
+        } else         if (method === 'tools/call') {
           const { name, arguments: args } = params;
           const code = args?.code || args;
           
+          let execResult: ExecuteResult;
           if (name === 'search') {
-            result = await handleSearch(code);
+            execResult = await handleSearch(code);
           } else if (name === 'execute') {
-            result = await handleExecute(code);
+            execResult = await handleExecute(code);
           } else {
             const response = {
               jsonrpc: '2.0',
@@ -180,6 +191,21 @@ async function main() {
             stdout.write(JSON.stringify(response) + '\n');
             continue;
           }
+          
+          const content = [];
+          if (execResult.error) {
+            content.push({ type: 'text', text: `Error: ${execResult.error}` });
+          } else {
+            const text = typeof execResult.result === 'string' 
+              ? execResult.result 
+              : JSON.stringify(execResult.result, null, 2);
+            content.push({ type: 'text', text });
+          }
+          if (execResult.logs && execResult.logs.length > 0) {
+            content.push({ type: 'text', text: `Logs:\n${execResult.logs.join('\n')}` });
+          }
+          
+          result = { content, isError: !!execResult.error };
         } else {
           const response = {
             jsonrpc: '2.0',
