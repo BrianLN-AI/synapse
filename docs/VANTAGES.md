@@ -4,6 +4,39 @@
 
 ---
 
+## Definitions
+
+### Vantage
+
+**A vantage is a disciplinary tradition, practice, or framework that offers a distinct way of understanding a system.**
+
+A vantage provides:
+- **Ontology** — what exists in this view
+- **Epistemology** — how we know what we claim
+- **Methodology** — how we investigate
+- **Key questions** — what to ask
+- **Invariants** — what must be preserved
+
+Vantages are not metaphors. A metaphor says "X is like Y." A vantage says "from X you see Z."
+
+### Metaphor
+
+**A metaphor is a named system that works, through which we understand something else.**
+
+Metaphors are named after systems (MOO, BEAM, Biology) that work. We study them to understand Synapse.
+
+See [docs/METAPHORS.md](METAPHORS.md) for the metaphor map.
+
+### The Relationship
+
+```
+System (works) → Metaphor (naming) → Vantage (discipline)
+```
+
+Studying a working system (MOO) gives you a metaphor. The metaphor points to a vantage (Actor Theorist). The vantage gives you a framework for reasoning.
+
+---
+
 ## Premise
 
 Different disciplines, traditions, and practices offer different ways of seeing the world. Each provides:
@@ -12,8 +45,6 @@ Different disciplines, traditions, and practices offer different ways of seeing 
 - A methodology (how we investigate)
 - Key questions to ask
 - Invariants to preserve
-
-We need a better word than "metaphor." Metaphor suggests comparison. These are vantage points — ways of looking at the same thing from different traditions.
 
 ---
 

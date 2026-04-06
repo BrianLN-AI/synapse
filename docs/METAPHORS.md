@@ -3,7 +3,29 @@
 > All models are wrong. Some are useful.
 > — George Box
 
-**See also:** [docs/VANTAGES.md](VANTAGES.md) for a formal framework for vantages — disciplinary traditions that offer different ways of seeing.
+## Definitions
+
+### Metaphor
+
+**A metaphor is a named system that works, through which we understand something else.**
+
+Metaphors are named after systems (MOO, BEAM, Biology) that work. We study them to understand Synapse.
+
+### Vantage
+
+**A vantage is a disciplinary tradition that offers a distinct way of understanding.**
+
+See [docs/VANTAGES.md](VANTAGES.md) for the formal framework.
+
+### The Relationship
+
+```
+System (works) → Metaphor (naming) → Vantage (discipline)
+```
+
+Studying a working system (MOO) gives you a metaphor. The metaphor points to a vantage (Actor Theorist). The vantage gives you a framework for reasoning.
+
+---
 
 This document maps the metaphor systems that inform Synapse. Each illuminates different aspects. Together they form a coherent picture.
 

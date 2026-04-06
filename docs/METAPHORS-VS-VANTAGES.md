@@ -4,11 +4,37 @@
 
 ---
 
+## Definitions
+
+### Metaphor
+
+**A metaphor is a named system that works, through which we understand something else.**
+
+- Named after systems (MOO, BEAM, Biology)
+- We study what works
+- The system illuminates Synapse
+
+### Vantage
+
+**A vantage is a disciplinary tradition that offers a distinct way of understanding.**
+
+- Named after traditions (Economist, Ethicist, Engineer)
+- Each sees differently
+- Provides framework for reasoning
+
+### The Relationship
+
+```
+System (works) → Metaphor (naming) → Vantage (discipline)
+```
+
+Studying a working system (MOO) gives you a metaphor. The metaphor points to a vantage (Actor Theorist). The vantage gives you a framework for reasoning.
+
+---
+
 ## The Question
 
-Metaphors are named after systems (MOO, BEAM, Biology). Vantages are named after disciplines (Economist, Ethicist, Engineer).
-
-Are these the same thing? How do they map?
+Are metaphors and vantages the same thing? How do they map?
 
 ---
 
