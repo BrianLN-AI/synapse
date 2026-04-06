@@ -14,6 +14,10 @@
 - We study what works
 - The system illuminates Synapse
 
+**Etymology:** Greek *metaphora* — *meta* (beyond) + *pherein* (to carry) — "to carry beyond"
+
+**Dictionary:** "A figure of speech in which a term is applied to something it is not literally applicable to suggest resemblance" (Dictionary.com)
+
 ### Vantage
 
 **A vantage is a disciplinary tradition that offers a distinct way of understanding.**
@@ -22,11 +26,100 @@
 - Each sees differently
 - Provides framework for reasoning
 
+**Etymology:** c. 1300, from Anglo-French *vauntage*, shortening of *avantage* — from Old French *avant* (before) → "position of superiority or advantage"
+
+**Dictionary:** "A position giving a strategic advantage" (Merriam-Webster)
+
 ### The Relationship
 
 ```
 System (works) → Metaphor (naming) → Vantage (discipline)
 ```
+
+---
+
+## Etymology and Dictionary Definitions
+
+### Vantage
+
+| Source | Definition |
+|--------|------------|
+| **Merriam-Webster** | "a position giving a strategic advantage" |
+| **Cambridge** | "a position or place that provides an advantage" |
+| **Etymology** | c. 1300, Anglo-French *vauntage*, shortening of *avantage* — "position of superiority" |
+
+**Core meaning:** Position that gives advantage. Being somewhere that lets you see more.
+
+### Metaphor
+
+| Source | Definition |
+|--------|------------|
+| **Dictionary.com** | "A figure of speech in which a term is applied to something it is not literally applicable to suggest resemblance" |
+| **Cambridge** | "An act of explaining or describing something by comparing it to something else" |
+| **Etymology** | Greek *metaphora* — *meta* (beyond) + *pherein* (to carry) — "to carry beyond" |
+| **Stanford Encyclopedia** | "A poetically or rhetorically ambitious use of words, a figurative as opposed to literal use" |
+
+**Core meaning:** Carrying beyond. Applying to something it doesn't literally apply to.
+
+---
+
+## Formalism Attempts
+
+### Metaphor (formal)
+
+```
+Metaphor : Source × Target × Mapping
+
+Where:
+  Source : System that works
+  Target : System to understand
+  Mapping : Structure-preserving correspondence
+
+Constraints:
+  ∀s ∈ Source, ∃t ∈ Target : maps(s, t)
+  structure(Source) ≅ structure(Target under Mapping)
+```
+
+### Vantage (formal)
+
+```
+Vantage : Ontology × Epistemology × Methodology × Invariants
+
+Where:
+  Ontology : Set of entities claimed to exist
+  Epistemology : Method of valid knowledge claims
+  Methodology : Investigation procedures
+  Invariants : Properties preserved under transformation
+
+Constraints:
+  ∀v ∈ Vantage, v is internally consistent
+  ∀q ∈ Questions(v), ∃ answer from Methodology(v)
+```
+
+**Note:** These formalisms require a metalanguage that defines systems, effectiveness, morphisms, and coherence. The formal definitions are incomplete — they gesture toward what formal definitions would require.
+
+---
+
+## Why "Vantage"?
+
+**Pros:**
+- Implies position → where you stand affects what you see
+- Implies advantage → seeing something others don't
+- Distinctive → not overused like "perspective" or "lens"
+- Spatial quality → you're somewhere, seeing from there
+
+**Cons:**
+- Doesn't capture disciplinary practice
+- Doesn't capture epistemological component
+
+**Alternatives considered:**
+- Perspective — clearer, more common, but overused
+- Lens — clearer, more common, but overused
+- Paradigm — captures tradition, but loaded (Kuhn)
+- Modality — captures mode, but abstract
+- Tradition — captures discipline, but doesn't capture seeing
+
+**Decision:** Keep "vantage" as the working term. It is distinctive and captures the positional aspect.
 
 Studying a working system (MOO) gives you a metaphor. The metaphor points to a vantage (Actor Theorist). The vantage gives you a framework for reasoning.
 
