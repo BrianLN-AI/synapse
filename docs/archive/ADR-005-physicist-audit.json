@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "artifact_id": "ADR-005",
+    "vantage_id": "Physicist",
+    "timestamp": "2026-04-06T15:00:00Z"
+  },
+  "nodes": [
+    {
+      "id": "PHYS-005-AX1",
+      "type": "Axiom",
+      "content": "Negative feedback loops are required for system stability.",
+      "justification": "Control theory axiom.",
+      "provenance": "TRAINED"
+    },
+    {
+      "id": "PHYS-005-F1",
+      "type": "Fact",
+      "content": "PROMOTE_TOLERANCE acts as a damping constant.",
+      "justification": "Prevents the feedback loop from diverging.",
+      "provenance": "UNTRAINED"
+    },
+    {
+      "id": "PHYS-005-F2",
+      "type": "Fact",
+      "content": "Recursive self-modification f_n = f_{n-1}(f_{n-1}) lacks a defined entropy sink.",
+      "justification": "System has no defined 'destruction' primitive for blobs.",
+      "provenance": "UNTRAINED"
+    }
+  ],
+  "edges": [
+    {
+      "source": "PHYS-005-F1",
+      "target": "PHYS-005-AX1",
+      "relation": "supports"
+    },
+    {
+      "source": "PHYS-005-F2",
+      "target": "PHYS-005-AX1",
+      "relation": "contradicts"
+    }
+  ]
+}

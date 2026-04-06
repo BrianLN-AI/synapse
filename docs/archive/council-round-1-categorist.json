@@ -1,0 +1,13 @@
+{
+  "role": "Categorist",
+  "audit": "Governance Evolution Structure",
+  "analysis": {
+    "conclusion": "NOT type-preserving",
+    "contradictions": [
+      {
+        "invariant": "Expression type invariance",
+        "contradiction": "The evolution from 'governance/single-key' (blob referencing a key) to 'governance/proof' (blob referencing a circuit) changes the required verification primitive, effectively altering the expression's 'contract' from signature verification to proof verification."
+      }
+    ]
+  }
+}

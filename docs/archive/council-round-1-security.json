@@ -1,0 +1,13 @@
+{
+  "role": "Security",
+  "audit": "Attack Surface",
+  "analysis": {
+    "conclusion": "Root of Trust vulnerability",
+    "threats": [
+      {
+        "vector": "Hash-bridge manipulation",
+        "description": "During governance evolution, the reliance on content-addressing allows a transient state where a governance blob could be spoofed if the hash-registry is updated faster than the network can verify the governance-transition proof."
+      }
+    ]
+  }
+}

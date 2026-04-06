@@ -1,0 +1,13 @@
+{
+  "role": "Economist",
+  "audit": "Incentive structure",
+  "analysis": {
+    "conclusion": "High risk of regulatory capture",
+    "findings": [
+      {
+        "strategy": "Quorum member coalition",
+        "impact": "Small coalitions can manipulate quorum governance expressions to permanently freeze the evolution path if they control 2/M of the quorum membership."
+      }
+    ]
+  }
+}
