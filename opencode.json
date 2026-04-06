@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "synapse": {
+      "type": "local",
+      "command": ["npx", "tsx", "/Users/bln/play/synapse/explore/functional/mcp_server.ts"],
+      "enabled": true
+    }
+  }
+}
