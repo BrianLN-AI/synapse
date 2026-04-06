@@ -40,6 +40,31 @@ Detects and eliminates "non-self."
 
 **Synapse:** Governance (germline) vs. invocation (soma).
 
+### Genetic Encoding
+
+The foundational metaphor for Synapse.
+
+| Genetic | Synapse | Function |
+|---------|---------|----------|
+| DNA | Blob | Heritable pattern |
+| RNA | Projection | Transcription to runtime |
+| Protein | Execution | Functional output |
+| Ribosome | Runtime | Machinery for projection |
+| Gene | Blob (capability) | Unit of function |
+| Genome | Vault | All patterns |
+| Cell | Scope | Containment + capability |
+
+The analogy is deep and intentional:
+- Content-addressed = DNA sequence = identity
+- Evolution = patterns that work survive
+- Expression = DNA → RNA → Protein = blob → runtime → execution
+- Virus = blob that hijacks machinery
+- Enzyme = specific capability
+- Horizontal gene transfer = sharing blobs across scopes
+- Epigenetics = governance affects expression without changing DNA
+
+See [docs/design/SYNTHESIS.md](../design/SYNTHESIS.md) for the full model.
+
 ---
 
 ## Cognitive Science

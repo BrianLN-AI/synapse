@@ -418,6 +418,35 @@ JSON           ← Data (structured, not executable)
 
 ---
 
+## The Genetic Encoding Metaphor
+
+The foundational analogy for understanding Synapse.
+
+| Genetic | Synapse | Function |
+|---------|---------|----------|
+| DNA | Blob | Heritable pattern |
+| RNA | Projection | Transcription to runtime |
+| Protein | Execution | Functional output |
+| Ribosome | Runtime | Machinery for projection |
+| Gene | Blob (capability) | Unit of function |
+| Genome | Vault | All patterns |
+| Cell | Scope | Containment + capability |
+
+### The Analogy Runs Deep
+
+- **Content-addressed:** DNA sequence = identity. Change sequence = different molecule.
+- **Evolution:** Patterns that work survive. Selection on blobs.
+- **Expression:** DNA → RNA → Protein. Blob → runtime → execution.
+- **Virus:** Blob that hijacks machinery. Tool that uses other tools.
+- **Enzyme:** Specific capability. Does one reaction efficiently.
+- **Horizontal gene transfer:** Sharing blobs across scopes/environments.
+- **Epigenetics:** Governance affects expression without changing DNA.
+- **Germline vs. Soma:** Governance (germline) vs. invocation (soma).
+
+See [docs/explore/LIVING-SYSTEMS.md](../explore/LIVING-SYSTEMS.md) for biology connections.
+
+---
+
 ## Key Properties
 
 1. **Content-addressing everywhere** — identity = hash
