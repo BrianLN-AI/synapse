@@ -108,6 +108,134 @@ Every vantage has:
 
 ---
 
+### Information Vantages
+
+**The Information Theorist**
+- **Ontology:** Signals, entropy, channels, codes
+- **Methodology:** Encode, transmit, decode, compress
+- **Questions:** How much information? What is redundant? What can be recovered?
+- **Invariants:** Information cannot be created or destroyed (only transformed)
+- **Signature:** H(X) = -Σ p(x) log p(x)
+- **Synapse:** Blob entropy, compression, channel capacity
+
+**The Data Scientist**
+- **Ontology:** Datasets, features, models, predictions
+- **Methodology:** Collect, transform, model, validate
+- **Questions:** What predicts what? How confident? What is the bias?
+- **Invariants:** No free lunch, bias-variance tradeoff
+- **Signature:** Training error, generalization gap
+- **Synapse:** Telemetry as data, fitness as prediction
+
+**The Statistician**
+- **Ontology:** Populations, samples, parameters, distributions
+- **Methodology:** Sample, estimate, test, infer
+- **Questions:** What varies? How? Is it significant?
+- **Invariants:** Law of large numbers, Central Limit Theorem
+- **Signature:** P(data | hypothesis)
+- **Synapse:** Fitness estimation, confidence intervals
+
+**The Bayesian**
+- **Ontology:** Priors, likelihoods, posteriors, beliefs
+- **Methodology:** Update beliefs given evidence
+- **Questions:** What do we believe now? How should we update?
+- **Invariants:** Bayes' theorem, coherence
+- **Signature:** P(θ | D) ∝ P(D | θ) × P(θ)
+- **Synapse:** Fitness as Bayesian update
+
+---
+
+### Complexity Vantages
+
+**The Complexity Theorist**
+- **Ontology:** Problems, reductions, complexity classes
+- **Methodology:** Classify, reduce, prove bounds
+- **Questions:** What is the complexity? P = NP?
+- **Invariants:** Complexity classes (P, NP, PSPACE)
+- **Signature:** Polynomial vs. exponential
+- **Synapse:** Blob complexity, governance cost
+
+**The Emergentist**
+- **Ontology:** Levels, emergence, downward causation
+- **Methodology:** Identify levels, trace emergence, find mechanisms
+- **Questions:** What emerges? How? What causes what?
+- **Invariants:** Conservation across levels
+- **Signature:** Macro from micro, feedback loops
+- **Synapse:** Blobs emerge from primitives, governance emerges from rules
+
+**The Fractalist**
+- **Ontology:** Self-similarity, scale invariance, fractals
+- **Methodology:** Measure dimension, find recursion, identify patterns
+- **Questions:** Is it self-similar? At what scales?
+- **Invariants:** Fractal dimension
+- **Signature:** D = lim log(N) / log(1/ε)
+- **Synapse:** Scope nesting, blob composition
+
+**The Network Scientist**
+- **Ontology:** Nodes, edges, networks, topologies
+- **Methodology:** Measure centrality, find communities, trace diffusion
+- **Questions:** Who is connected to whom? What flows? How resilient?
+- **Invariants:** Degree distribution, clustering coefficient
+- **Signature:** Small world, scale-free
+- **Synapse:** Reference graph, blob dependencies
+
+---
+
+### Biological Vantages
+
+**The Epidemiologist**
+- **Ontology:** Hosts, pathogens, transmissions, immunity
+- **Methodology:** Track, model, predict, intervene
+- **Questions:** What spreads? How fast? What stops it?
+- **Invariants:** R₀ (basic reproduction number)
+- **Signature:** SIR model, herd immunity
+- **Synapse:** Blob propagation, viral capabilities, quarantine
+
+**The Ecologist**
+- **Ontology:** Species, niches, ecosystems, succession
+- **Methodology:** Observe, model, manage
+- **Questions:** What occupies this niche? What is the carrying capacity?
+- **Invariants:** Conservation of matter and energy
+- **Signature:** Food webs, trophic levels
+- **Synapse:** Blob ecosystems, keystone patterns
+
+**The Geneticist**
+- **Ontology:** Genes, alleles, genotypes, phenotypes
+- **Methodology:** Sequence, compare, associate, edit
+- **Questions:** What is the sequence? What does it do?
+- **Invariants:** Central dogma (DNA → RNA → protein)
+- **Signature:** Genetic code, inheritance
+- **Synapse:** Blob inheritance, composition
+
+---
+
+### Neural/Cognitive Vantages
+
+**The Connectionist**
+- **Ontology:** Neurons, weights, activations, layers
+- **Methodology:** Train, optimize, infer, fine-tune
+- **Questions:** What does the network learn? How?
+- **Invariants:** Gradient descent, loss landscape
+- **Signature:** Weights → activations → output
+- **Synapse:** Neural-inspired routing, embedding spaces
+
+**The Neuroscientist**
+- **Ontology:** Neurons, synapses, regions, networks
+- **Methodology:** Measure, stimulate, model
+- **Questions:** How does the brain implement this?
+- **Invariants:** Neural coding principles
+- **Signature:** Spike timing, connectivity
+- **Synapse:** Synaptic weight = blob fitness
+
+**The Cognitive Psychologist**
+- **Ontology:** Representations, processes, capacities
+- **Methodology:** Test, measure, compare
+- **Questions:** What can be processed? How fast?
+- **Invariants:** Working memory limits
+- **Signature:** Reaction time, accuracy
+- **Synapse:** Cognitive load, attention
+
+---
+
 ### Social Vantages
 
 **The Economist**
@@ -148,6 +276,38 @@ Every vantage has:
 - **Questions:** What is the complexity? Does it terminate?
 - **Invariants:** Correctness, termination
 - **Signature:** O(n log n)
+
+**The Actor Theorist**
+- **Ontology:** Actors, messages, mailboxes, behaviors
+- **Methodology:** Send, receive, spawn, supervise
+- **Questions:** What sends to what? Who supervises? What fails?
+- **Invariants:** Isolation, no shared state
+- **Signature:** send(pid, msg), become(behavior)
+- **Synapse:** Blob invocation, scope isolation, supervision
+
+**The Event/Stream Processor**
+- **Ontology:** Events, streams, windows, aggregations
+- **Methodology:** Filter, map, reduce, join
+- **Questions:** What happened? When? In what order?
+- **Invariants:** Event ordering, exactly-once
+- **Signature:** Event time, processing time, watermarks
+- **Synapse:** Telemetry as event stream, audit as event log
+
+**The Protocol Designer**
+- **Ontology:** Messages, state machines, handshakes
+- **Methodology:** Specify, model, verify
+- **Questions:** What messages? In what order? What if?
+- **Invariants:** Safety (nothing bad) + liveness (something good)
+- **Signature:** State machine, sequence diagrams
+- **Synapse:** Protocol as blob, invocation as handshake
+
+**The Security Specialist**
+- **Ontology:** Threats, attacks, defenses, trust
+- **Methodology:** Threat model, attack surface, defense in depth
+- **Questions:** What can go wrong? Who do we trust?
+- **Invariants:** Principle of least privilege
+- **Signature:** CIA triad (confidentiality, integrity, availability)
+- **Synapse:** Capability model, scope isolation
 
 **The Engineer**
 - **Ontology:** Systems, components, interfaces
@@ -418,9 +578,10 @@ When council disagrees, which vantage wins?
 ## See Also
 
 - [docs/METAPHORS.md](METAPHORS.md) — The unified metaphor map
+- [docs/METAPHORS-VS-VANTAGES.md](METAPHORS-VS-VANTAGES.md) — Mapping and gaps between metaphors and vantages
 - [docs/VISION.md](VISION.md) — The thesis
 - [docs/design/SYNTHESIS.md](design/SYNTHESIS.md) — Technical synthesis
-- [docs/INVARIANTS.md](INVARIANTS.md) — Constitutional invariants
+- [docs/INVARIANTS.md](../INVARIANTS.md) — Constitutional invariants
 - [universal-graph-formal-model](https://github.com/BrianLN-AI/universal-graph-formal-model) — Formal methods research
 
 ---

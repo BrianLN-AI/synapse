@@ -389,8 +389,9 @@ The graph is the universal form. Synapse makes graphs explicit, content-addresse
 
 - [docs/VISION.md](VISION.md) — The thesis
 - [docs/design/SYNTHESIS.md](design/SYNTHESIS.md) — Technical model
-- [docs/design/SCOPE.md](design/SCOPE.md) — Scope taxonomy
-- [docs/INVARIANTS.md](INVARIANTS.md) — Constitutional invariants
+- [docs/VANTAGES.md](VANTAGES.md) — Formal vantage framework
+- [docs/METAPHORS-VS-VANTAGES.md](METAPHORS-VS-VANTAGES.md) — Mapping and gaps
+- [docs/INVARIANTS.md](../INVARIANTS.md) — Constitutional invariants
 - [docs/KNOWLEDGE.md](KNOWLEDGE.md) — Current state map
 
 ---
