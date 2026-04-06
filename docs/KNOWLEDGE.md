@@ -190,8 +190,22 @@ const tool = {
 | **Mycelium** | Persistent substrate feeding the mesh |
 | **Rhizome** | Non-hierarchical, any-point-to-any-point |
 
+### All Metaphor Systems
+
+See [docs/METAPHORS.md](METAPHORS.md) for a unified map of all metaphor systems:
+- Neurobiology (Synapse)
+- Mycology (Mycelium)
+- Philosophy (Rhizome)
+- Physics (Wavefunction)
+- Biology (Living systems)
+- MOO (Objects/Messages)
+- Smalltalk (Live coding)
+- Erlang/BEAM (Actors)
+- Economics (Markets/Commons)
+- Ethics (Values/Governance)
+
 ### See Also
-- [docs/genesis/METAPHORS.md](genesis/METAPHORS.md) — Full metaphor treatment
+- [docs/genesis/METAPHORS.md](genesis/METAPHORS.md) — Original founding metaphors
 
 ---
 
@@ -206,6 +220,26 @@ const tool = {
 | **Smart contracts** | Stable addresses, immutable execution |
 | **Git** | Content-addressing, DAG structure |
 | **IPFS** | Distributed content addressing |
+
+### Formal Models Across Disciplines
+
+The graph unification thesis: **graphs with typed edges provide a unifying mathematical framework across computational, logical, physical, and informational domains.**
+
+| Formal Method | Graph Interpretation | Synapse Connection |
+|---------------|---------------------|-------------------|
+| **Type Theory** | Types as nodes, subtyping as edges | Blob types, scope types |
+| **Category Theory** | Objects, morphisms, functors | Composition, scope functors |
+| **Process Calculi** | Processes as nodes, communications as edges | Actor model, message passing |
+| **Petri Nets** | Places, transitions, tokens | State machines, workflow |
+| **Modal Logic** | Possible worlds as nodes, accessibility as edges | Governance, time |
+| **Coalgebra** | States, observations, behaviors | Scope behaviors, telemetries |
+| **Manifolds** | Charts as local views, atlases as global | Scope projections, protocol → runtime |
+| **Fields** | Distributed state, measurement | Content-addressing, invariance |
+| **Engrams** | Synaptic patterns, reconstruction | Memory, pattern persistence |
+
+**Key insight:** Every formal method has a natural graph interpretation. The graph is the universal form.
+
+**Research base:** See [universal-graph-formal-model](https://github.com/BrianLN-AI/universal-graph-formal-model) for full survey.
 
 ### See Also
 - [docs/explore/MOO.md](explore/MOO.md)
