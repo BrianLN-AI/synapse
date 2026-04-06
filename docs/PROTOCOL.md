@@ -28,13 +28,31 @@ put(blob) → hash
 scan(filter) → [blob]
 ```
 
+The vault is scoped, not global. Each scope (user, tenant, project, session) holds references to the blobs it uses. Storage grows with scope activity.
+
+See [docs/design/SCOPE.md](docs/design/SCOPE.md) for the scope model.
+
 Storage backend is implementation-defined: filesystem, SQLite, memory, S3, IPFS.
 
-### 1.3 Node
+### 1.3 Scope
+
+A scope is a reference container. It holds references (hashes) to blobs, not the blobs themselves.
+
+```json
+{
+  "id": "scope_id",
+  "type": "private|org|public|...",
+  "references": { "hash": count, ... }
+}
+```
+
+Scopes can reference each other. The vault is the union of all scoped reference graphs.
+
+### 1.4 Node
 
 A runtime instance with a vault and a linker. Identified by a public key pair.
 
-### 1.4 Mesh
+### 1.5 Mesh
 
 A set of nodes that can exchange blobs by hash.
 

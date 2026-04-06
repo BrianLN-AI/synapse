@@ -1,319 +1,221 @@
-# Scope Design: Questions, Ideas, and Open Problems
+# Scope Design
 
-> **Status:** Brainstorm — gathering questions and concepts before synthesis
+> **Status:** Design — scope taxonomy, principles, and open problems
 
 ---
 
 ## Core Insight
 
-> Scope contains references. If nothing in scope references a hash, that hash isn't your problem.
+> Scope contains references. GC happens when nothing in scope references a hash.
 
 The vault is not a global flat store. It is the union of scoped reference graphs. Storage cost is a function of scope activity, not total system size.
 
 ---
 
-## Key Principle: Reference Graph Ownership
+## Scope as Caching
 
-| Old framing | New framing |
-|-------------|-------------|
-| Global append-only vault | Union of scoped vaults |
-| "All blobs persist forever" | "Blobs persist as long as referenced" |
-| Storage grows unbounded | Storage grows with scope needs |
-| Storage = total blobs | Storage = referenced blobs |
+Scopes are cache regions. References are cached items. Hashes are cache keys. GC is eviction.
 
-**The invariant:**
-> A scope must be able to resolve every hash it references. The vault is the set of hashes a scope can resolve.
+| Caching | Synapse scope |
+|---------|---------------|
+| Cache region | Scope |
+| Cached item | Reference (hash in scope) |
+| Cache key | Hash (content-address) |
+| Eviction | GC when refcount = 0 |
+| Cache miss | Cold start (empty scope) |
+| Cache warming | Pre-populate scope |
+| TTL | (not modeled) |
+| Write-through | Blob promotion propagates |
 
-**The consequence:**
-> Garbage collection is tractable at scope level. GC per scope, not global.
+**The twist:** Content-addressing provides automatic coherence. Same hash → same content everywhere. No invalidation protocol needed.
+
+**Layered caching:**
+
+```
+┌─────────────────────────────────────┐
+│ User scope (L1)  → immediate refs  │
+├─────────────────────────────────────┤
+│ Tenant scope (L2) → org pool       │
+├─────────────────────────────────────┤
+│ Public scope (L3) → shared blobs   │
+├─────────────────────────────────────┤
+│ Cold storage       → unreferenced  │
+├─────────────────────────────────────┤
+│ Global vault        → source of    │
+│                     truth          │
+└─────────────────────────────────────┘
+```
 
 ---
 
-## Modes of Scope Creation
+## Scope Taxonomy
 
-| Mode | Trigger | Lifespan | Example |
-|------|---------|----------|---------|
-| **User** | First invoke | Persistent | My blobs, my telemetry |
-| **Session** | Connection start | Ephemeral | Lambda cold start, REPL, MOO login |
-| **Tenant** | Org signup | Persistent + billed | Company storage pool |
-| **Project** | Repo init | Persistent | Project dependencies, Docker image |
-| **Invocation** | Blob call | Atomic | Each blob execution scope |
-| **Deployment** | Deploy event | Versioned | `deploy-2024-03-06` |
-| **Role** | Permission grant | Scoped to grant | `admin`, `viewer`, `contributor` |
+Scopes are characterized along multiple dimensions simultaneously:
+
+```
+Scope Type         ← What it contains
+Scope Visibility   ← Who can access
+Scope Inheritance  ← What it inherits
+Scope Lifespan     ← When it dies
+Scope Persistence  ← What survives
+```
+
+### By Type
+
+| Scope | Contains | Example |
+|-------|----------|---------|
+| `private` | User's own refs | My blobs, my telemetry |
+| `org` | Team's refs | Shared project blobs |
+| `public` | Published refs | Common library blobs |
+| `query_result` | Ephemeral refs | Search results, graph traversals |
+| `query_def` | Saved queries | Named queries, filters |
+| `deployment` | Versioned refs | `deploy-2024-03-06` |
+| `invocation` | Ephemeral refs | Per-call scope |
+| `cleanroom` | Minimal refs | Fresh environment |
+| `template` | Empty shell | Scope factory |
+
+### By Visibility
+
+| Visibility | Access | Governance |
+|------------|--------|------------|
+| `private` | Owner only | Owner-defined |
+| `shared` | Explicit grants | Owner + grantee |
+| `published` | Anyone can read | Publisher-defined |
+| `public` | Anyone invoke | Global governance |
+
+### By Inheritance
+
+| Pattern | Behavior | Example |
+|---------|----------|---------|
+| `clone` | Copy all refs | Project fork |
+| `inherit` | Parent refs + own | Tenant inherits org |
+| `override` | Parent + local overrides | Org customizes global |
+| `sandbox` | No inheritance | Cleanroom |
+| `link` | Reference without copy | Shared module |
+
+### By Lifespan
+
+| Pattern | Creation | Death |
+|---------|----------|-------|
+| `permanent` | Signup | Deletion request |
+| `persistent` | Project init | Project delete |
+| `versioned` | Deploy | New deploy supersedes |
+| `session` | Login | Logout |
+| `ephemeral` | Invocation | Return |
 
 ---
 
-## How Other Systems Handle Scope/Tenancy
+## Scope Graph
 
-### Erlang/OTP
-
-```
-Process = scope (ephemeral, lightweight, millions per node)
-Supervision tree = lifecycle hierarchy
-ETS tables = shared scope (persists across process death)
-Mnesia = distributed scope (shared state)
-spawn = scope creation
-```
-
-- No persistent per-user scope
-- State lives in ETS/Mnesia, keyed by user ID
-- Process death = scope death (no persistence)
-- Hot code loading updates scope in place
-
-**Insight:** Erlang's "scope" is ephemeral process. Storage is explicit (ETS/Mnesia), not implicit (vault).
-
-### MOO
+Scopes can reference each other. A private scope can reference public blobs. An org scope can reference member's scopes. A query scope references the blobs it found.
 
 ```
-Player = tenant (persistent identity)
-Room = scope (what you can see)
-Inventory = user's contained objects
-Verb permissions = RBAC within scope
-Creation room = first login spawns player object
+user_scope:     { my_blob, my_blob, public/stdlib }
+                      ↑          ↑         ↑
+                      └──────────┴─────────┴─ references to other scopes
 ```
 
-- World is global; rooms partition visibility
-- Every player object has stable ID (`#1234`)
-- Properties are mutable in place (current state)
-- History is not tracked (no version control)
+**This is a directed graph of scopes, not a tree.** Cyclic references are fine (content-addressed).
 
-**Insight:** MOO has stable object IDs but mutable state. Synapse could have stable IDs with immutable version history.
+Scopes can also be:
 
-### Smalltalk
+| Relationship | Description |
+|--------------|-------------|
+| Parent/child | Scope A owns Scope B |
+| Peer | Scopes share a parent |
+| Reference | Scope A references Scope B's blobs |
+| Fork | Clone of Scope A |
 
-```
-Image = global scope (one world)
-Package/Namespace = visibility partition
-Class = global singleton
-```
+---
 
-- No built-in tenancy
-- Image backup = point-in-time snapshot
-- Live coding modifies running system
-- Bootstrap problem: how does image boot itself?
+## Scope Structure
 
-**Insight:** Smalltalk's "scope" is the entire image. Namespace/package provides visibility control but not isolation.
-
-### Kubernetes
-
-```
-Namespace = org (hard partition)
-Pod = ephemeral scope (restartable)
-Deployment = versioned scope
-PVC = persistent claim
-RBAC = roles within namespace
-```
-
-- Namespaces are hard isolation boundaries
-- Resources scoped to namespace
-- Quotas per namespace
-- Network policies per namespace
-
-**Insight:** Kubernetes treats scope as isolation unit with quotas. Synapse could use scope for storage/compute quotas.
-
-### Smart Contracts (Ethereum)
-
-```
-Contract address = stable ID
-Call scope = transaction (ephemeral)
-Storage = persistent (within contract)
+```json
+{
+  "scope": {
+    "id": "stable_scope_id",
+    "type": "private|org|public|query_result|...",
+    "visibility": "private|shared|published|public",
+    "inheritance": "clone|inherit|override|sandbox|link",
+    "lifespan": "permanent|persistent|versioned|session|ephemeral",
+    "parent": "optional_scope_id",
+    "references": {
+      "hash1": { "count": 3, "scope": "local" },
+      "hash2": { "count": 1, "scope": "public" }
+    },
+    "capabilities": ["invoke", "create", "delegate", "publish"],
+    "governance": "governance_expression_id",
+    "owner": "user_or_org_id",
+    "metadata": {}
+  }
+}
 ```
 
-- Contract state is mutable (via calls)
-- Transaction is ephemeral scope
-- State changes are deterministic and auditable
-- No GC — storage grows forever
+---
 
-**Insight:** Smart contracts have stable addresses with mutable state. "Gas" is the cost-per-computation model.
+## Reference Resolution
 
-### Multi-Tenant SaaS Patterns
+When a scope references a hash:
 
-```
-Database per tenant = strong isolation
-Schema per tenant = shared infra + partitioning
-Row-level security = shared table + policies
-```
+1. Check local scope
+2. Check parent scopes (if inheritance)
+3. Check linked scopes (if reference)
+4. Check public scopes (if visibility allows)
+5. Return NotFound
 
-- Tradeoff: isolation vs. overhead
-- Billing per tenant straightforward
-- Compliance implications (GDPR)
+**Reference counting:**
 
-**Insight:** These patterns are for data, not computation. Synapse's scope model could layer on top.
+- Each scope tracks local reference counts
+- Cross-scope references are tracked in originating scope
+- GC when count = 0 in all referencing scopes
+
+---
+
+## Key Principles
+
+### 1. Scope contains references, not content
+
+Storage is content. Scopes hold references. Content lives in the vault.
+
+### 2. GC is tractable at scope level
+
+When nothing in a scope references a hash, that hash can be GC'd from that scope's working set.
+
+### 3. Content-addressing provides coherence
+
+Same hash = same content everywhere. No invalidation protocol needed.
+
+### 4. Scopes are composable
+
+Scopes can reference other scopes. Composition is declaration, not copying.
+
+### 5. Visibility is orthogonal to type
+
+A `private` scope can be `clone`d into a `shared` scope. A `public` scope can contain `private` blobs (owned by different users).
+
+---
+
+## Comparison with Other Systems
+
+| System | Scope model |
+|--------|------------|
+| Erlang/OTP | Ephemeral processes + explicit ETS/Mnesia storage |
+| MOO | Global world, rooms partition visibility, stable object IDs |
+| Smalltalk | Global image, namespace/package for visibility |
+| Kubernetes | Namespace = hard partition, RBAC within |
+| Smart contracts | Stable address, mutable state, no GC |
+| CDN | Edge caches + origin, TTL-based eviction |
 
 ---
 
 ## Open Questions
 
-### 1. Is Scope Hierarchical?
-
-**Question:** Can scopes nest? (User → Project → Invocation?)
-
-| Option | Pros | Cons |
-|--------|------|------|
-| Flat | Simple | No parent-child relationships |
-| Hierarchical | Natural nesting, inheritance | Complexity in reference resolution |
-| Graph | Flexible, can share | Harder to reason about |
-
-### 2. What Does Scope Creation Mean?
-
-**Question:** Is scope creation:
-- Allocation (reserve storage quota)?
-- Initialization (first blob PUT)?
-- Registration (make scope discoverable)?
-
-### 3. Can Scopes Share Blobs?
-
-**Question:** If scope A references blob H, and scope B also references H:
-- Do they share one copy? (Yes, content-addressed)
-- Does each have own reference count?
-- Can scope B "unshare" by copying?
-
-### 4. What Persists When Scope Dies?
-
-| Lifespan | What survives |
-|----------|---------------|
-| Ephemeral (session) | Nothing |
-| Project | Blobs (if explicitly kept) |
-| Tenant | Everything |
-
-**Question:** Is there a "tenant death" protocol? (Data export, grace period, deletion?)
-
-### 5. Governance Per Scope?
-
-**Question:** Does each scope have its own governance expression?
-- Yes: scope-specific fitness function
-- No: global governance applies everywhere
-- Hybrid: scope inherits parent, can override
-
-### 6. Billing Model
-
-**Question:** How do we charge for scope usage?
-- Per-scope storage (total referenced blobs)
-- Per-invocation compute
-- Per-reference (cross-scope calls)
-- Flat rate
-
-### 7. Cross-Scope References
-
-**Question:** What happens when scope A invokes a blob in scope B?
-- Cross-scope call allowed?
-- Reference counted in both?
-- Governance required?
-
-### 8. Scope Migration
-
-**Question:** Can a scope move between tenants?
-- User leaves org, takes their scope
-- Project transfers ownership
-- Tenant merges with another
-
-### 9. Scope Archival
-
-**Question:** Can scopes be "frozen" (read-only, no new invocations)?
-- Useful for compliance (audit scope)
-- Useful for deprecation (deprecated project)
-
-### 10. Scope Visibility
-
-**Question:** Who can see a scope?
-- Private (owner only)
-- Shared (explicit grant)
-- Public (anyone can invoke)
-
----
-
-## Emerging Concepts
-
-### Reference Graph as Primary Structure
-
-The vault is not a flat store. It is the union of reference graphs. Each scope has its own reference graph. Storage is the union across all scopes.
-
-```
-scope_1: { A, B, C }
-scope_2: { A, D, E }
-vault = { A, B, C, D, E }  // A appears once, shared
-```
-
-Reference counting per scope determines when blobs can be GC'd.
-
-### Scope as Capability Container
-
-Scopes hold capabilities. Capabilities are references to blobs. The scope's permission set determines what its references can do.
-
-```
-scope = {
-  id: stable_scope_id,
-  references: { hash1: count, hash2: count, ... },
-  capabilities: ["invoke", "create", "delegate"],
-  parent: optional_scope_id,
-  governance: governance_expression_id
-}
-```
-
-### Ephemeral Scopes for Isolation
-
-Each blob invocation could create an ephemeral scope:
-- Receive context as input
-- Execute with limited references
-- Return result, scope destroyed
-
-This provides isolation without persistence overhead.
-
-### Stable Object IDs
-
-Building on MOO's `#1234` pattern:
-
-```
-object = {
-  id: stable_id,        // User-facing reference
-  current: hash,         // Current version
-  history: [hashes],     // Version history
-  owner: scope_id
-}
-```
-
-- Stable ID for human use
-- Hash for verification
-- History for audit
-
-### Scoped Governance
-
-Governance expressions could be scoped:
-- Scope inherits parent governance by default
-- Can override with scope-specific expression
-- Changes propagate down hierarchy
-
-### "Cold Storage" for Unreferenced Blobs
-
-When a blob loses all references:
-1. Not deleted
-2. Moved to cold storage (cheaper)
-3. First reference triggers "restore" (slower)
-4. Long no-reference period → deleted
-
----
-
-## Questions from Discussion
-
-### What actually requires keeping a hash indefinitely?
-
-- Nothing, if nothing references it
-- Reference graph determines storage needs
-- "Append only" is pragmatic, not a law
-
-### Is the vault scoped or global?
-
-- Scoped in principle
-- Union of scoped vaults = total content
-- Shared blobs reduce storage cost
-
-### What triggers scope creation?
-
-- User first invoke
-- Project initialization  
-- Tenant signup
-- Deployment event
-- Login/session start
+1. **Hierarchical vs. graph?** Is scope a tree, a graph, or both?
+2. **Scope creation protocol?** What does "create scope" mean operationally?
+3. **Cross-scope invocation?** When scope A calls blob in scope B, what happens?
+4. **Billing model?** Per-scope storage? Per-invocation? Per-reference?
+5. **Scope death protocol?** Grace period, data export, deletion?
+6. **Scope migration?** Can scopes move between tenants?
 
 ---
 
@@ -323,15 +225,15 @@ When a blob loses all references:
 - MOO: LambdaMOO object model, property/verb model
 - Kubernetes: Namespace, RBAC, ResourceQuota
 - Smart contracts: Solidity storage model
-- Multi-tenant SaaS: Database isolation patterns
+- CDN: Edge caching, TTL, write-through
+- Content-addressed storage: IPFS, git
 
 ---
 
 ## Next Steps
 
-1. Decide: hierarchical vs. flat vs. graph scope model
-2. Design: scope creation protocol
-3. Design: reference counting / GC strategy
-4. Design: cross-scope invocation semantics
-5. Design: billing model
-6. Prototype: simplest scope model
+1. Define scope creation protocol
+2. Design reference counting strategy
+3. Design cross-scope invocation semantics
+4. Prototype layered scope model
+5. Design billing model
