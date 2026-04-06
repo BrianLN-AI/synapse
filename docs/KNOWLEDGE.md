@@ -180,7 +180,13 @@ const tool = {
 
 ---
 
-## The Metaphors
+## The Metaphors and Vantages
+
+### Vantages: Ways of Seeing
+
+Better than "metaphor" — vantages are disciplinary traditions, practices, and frameworks that offer different ways of understanding the same thing.
+
+See [docs/VANTAGES.md](VANTAGES.md) for the formal framework.
 
 ### Founding Metaphors
 

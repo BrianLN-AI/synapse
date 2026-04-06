@@ -3,6 +3,8 @@
 > All models are wrong. Some are useful.
 > — George Box
 
+**See also:** [docs/VANTAGES.md](VANTAGES.md) for a formal framework for vantages — disciplinary traditions that offer different ways of seeing.
+
 This document maps the metaphor systems that inform Synapse. Each illuminates different aspects. Together they form a coherent picture.
 
 ---

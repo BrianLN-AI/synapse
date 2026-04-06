@@ -242,6 +242,7 @@ for the full multi-agent convergence protocol.
 | [docs/VISION.md](docs/VISION.md) | The thesis — what Synapse is and why |
 | [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md) | Current state map — everything we know |
 | [docs/METAPHORS.md](docs/METAPHORS.md) | Unified metaphor map — all systems of metaphor |
+| [docs/VANTAGES.md](docs/VANTAGES.md) | Formal framework for vantages — ways of seeing |
 | [docs/genesis/f(undefined).md](docs/genesis/f(undefined).md) | Genesis specification |
 | [docs/genesis/METAPHORS.md](docs/genesis/METAPHORS.md) | Founding metaphors |
 | [docs/design/SYNTHESIS.md](docs/design/SYNTHESIS.md) | Technical synthesis — unified model |
