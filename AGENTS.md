@@ -1,52 +1,107 @@
-# AGENTS.MD: The Evolutionary Manual
+# AGENTS.MD
+
 **Role:** D-JIT Fabric Architect & Optimization Agent
-**Primary Directive:** Use `f(undefined).md` and `METAPHORS.md` as the foundation for all logic.
 
-## 1. The Golden Rules
-1. **The ABI is Law:** Every engine must enforce the `result` variable contract and provide a `log()` sink.
-2. **The BIOS Rule:** `seed.py` must be able to boot via a raw disk-lookup fallback (`_raw_get`) to prevent infinite recursion.
-3. **No Bricking:** Never update the `manifest.hash` until you have verified the integrity of the new L1-L3 Blobs in a separate worktree.
-4. **The Hash Rule:** The canonical content-address function is **blake3** (32-byte output). Never introduce SHA-256, blake2s, or blake2b in new code. All vault storage, manifest hashing, and ZK circuits must use blake3. The vault address IS the blake3 hash — changing this breaks blob identity.
+---
 
-## 2. Version Control & Safety (Git Worktrees)
-* **Step-Wise Commits:** Work in incremental steps. Commit after every successful unit test.
-* **Worktree Isolation:** Use `git worktree add` to test "Mutation" branches without polluting the stable vault.
-* **Triple-Pass Review:** (Static Analysis -> Safety Verification -> Protocol Compliance).
+## Finding Current State
 
-## 3. Implementation Roadmap
-1. **Phase 1 (The BIOS Seed):** Build `seed.py` with a scope-scrubber and `_raw_get` fallback.
-2. **Phase 2 (The Fabric Admin):** Create the `promote` routine and test fixtures.
-3. **Phase 3 (The Recursive Leap):** Migrate `discovery` and `planning` layers into Blobs.
-4. **Phase 4 (The Witnessing):** Integrate ZK proof artifacts into the promotion gate. See `ZK_PROTOCOL.md`.
+The system evolves through generations f_0 through f_N. State is discovered, not hardcoded.
 
-## 4. The Iteration Cycle
+```bash
+# Current generation (most recent council/f_N worktree)
+git worktree list | grep council/f_ | sort -V | tail -1
 
-Every f_N iteration follows this sequence:
+# Stable anchor (main branch manifest hash)
+git show main:manifest.hash
+
+# Vault contents
+ls blob_vault/
+```
+
+Canonical docs:
+- Genesis: `docs/genesis/f(undefined).md`, `docs/genesis/METAPHORS.md`
+- Principles: `docs/INVARIANTS.md`, `lambda.md`
+- Protocol: `docs/PROTOCOL.md`
+- Security: `docs/SECURITY.md`
+- Decisions: `docs/adr/`
+- ZK protocol: `ZK_PROTOCOL.md`
+- Process: `docs/PROCESS.md`
+
+---
+
+## Discovery Procedures
+
+### How to find the active engine blob
+
+```bash
+python3 -c "import json; m=json.load(open('manifest.json')); print(m['blobs']['engine']['logic/python'][:16]+'...')"
+```
+
+### How to evolve a generation
+
+```bash
+python3 evolve.py --label discovery  # or planning, judge, engine
+```
+
+### How to promote safely
+
+```bash
+python3 promote.py  # runs triple-pass review first
+```
+
+---
+
+## Golden Rules
+
+1. **ABI contract:** Every engine must enforce `result` variable + `log()` sink.
+2. **BIOS fallback:** `seed.py` boots via `_raw_get` only — no engine dependency in kernel.
+3. **No bricking:** Never update `manifest.hash` until verified in a separate worktree.
+4. **blake3 only:** The vault address IS the blake3 hash. No SHA-256, blake2s, or blake2b.
+
+---
+
+## Iteration Cycle
 
 ```
 evaluate → mutate → review → benchmark → promote → document
 ```
 
-The `document` step is mandatory. At the end of each iteration:
-1. Identify the key decision(s) made in this cycle
-2. Write `docs/adr/ADR-NNN-<slug>.md` (or `CAP-NNN` / `LESSON-NNN`) for each
-3. Flag each: `[CHERRY-PICK CANDIDATE]`, `[BRANCH-ONLY]`, or `[LESSON — do not adopt]`
-4. Commit the findings alongside the code
-5. Move the iteration tag to include the findings commit
+### Document step (mandatory)
 
-See `ADR_WORK.md` in this worktree for the walking instructions for each tag point.
-See `docs/adr/` for the accumulated decision record.
+At cycle end, for each decision:
+1. Write `docs/adr/ADR-NNN-<slug>.md`
+2. Flag: `[CHERRY-PICK CANDIDATE]`, `[BRANCH-ONLY]`, or `[LESSON — do not adopt]`
+3. Commit findings with the code
 
-## 5. The Fitness Function ($f$)
-Optimize all logic for:
+---
+
+## Fitness Function
+
 $$f(Link) = \frac{SuccessRate \times Integrity}{Latency \times ComputeCost}$$
 
-This formula is provable as a ZK circuit. A council member proving their arithmetic can produce a 16KB proof verifiable in 21ms. See `ZK_PROTOCOL.md` for the circuit specification.
+Full treatment: `docs/INVARIANTS.md`
 
-## 5. ZK Protocol
-Before writing any ZK circuit or modifying proof-related code, read `ZK_PROTOCOL.md`.
-Key rules:
-* All circuits use blake3 as the hash primitive.
-* Proof artifacts are blobs — PUT them in the vault, reference by hash.
-* The vault is currently trusted (local filesystem). ZK proves computation correctness at promotion time, not storage integrity.
-* Do not add per-invocation proofs. Proofs belong at promotion time only.
+---
+
+## ZK Protocol
+
+Before touching proof code: read `ZK_PROTOCOL.md`.
+
+- Hash primitive: blake3
+- Proof artifacts: blobs (PUT to vault, reference by hash)
+- Proofs belong at promotion time, not per-invocation
+
+---
+
+## Worktree Strategy
+
+```bash
+# Test a mutation in isolation
+git worktree add ../worktrees/test-feature main
+# ... work ...
+git worktree remove ../worktrees/test-feature
+
+# Commit after each successful unit test
+git add -A && git commit -m "describe what changed"
+```

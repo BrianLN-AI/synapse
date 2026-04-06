@@ -1,7 +1,7 @@
 # ADR-015: Multihash Address Format
 
 **Date:** 2026-04-02
-**Status:** Proposed
+**Status:** Accepted — implemented in f_16 (council/f_16, v1.16.0)
 **Supersedes:** ADR-001 (partially — address encoding; blake3 as canonical vault hash retained)
 **Superseded by:** —
 
@@ -41,12 +41,13 @@ required to verify it. [CITED — Protocol Labs, multihash specification, 2014]
 
 An address encodes three fields:
 
-```
+```text
 address = function_id | digest_length | digest_bytes
 ```
 
 **String representation** (canonical, human-readable):
-```
+
+```text
 <function-prefix>:<hex-digest>
 
 blake3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262
@@ -55,7 +56,8 @@ poseidon:7f3c21...
 ```
 
 **Binary representation** (for compact storage and ZK circuits):
-```
+
+```text
 [varint: function_id][varint: digest_length_bytes][bytes: digest]
 ```
 
@@ -92,7 +94,7 @@ The hash-bridge expression is itself a vault expression with a blake3 address.
 
 **The KEY invariant updated:**
 
-```
+```text
 address = multihash(envelope)
         = function_id | digest_length | digest_bytes
 
@@ -112,6 +114,7 @@ prefix form. The vault can contain both; callers that understand multihash handl
 ## Alternatives Considered
 
 ### Keep 64-char blake3 hex (current)
+
 - **Pro:** Simple, no change required, no parsing overhead
 - **Con:** Cannot distinguish blake3 from sha256 addresses at read time
 - **Con:** Blocks federation with systems using different hash functions
@@ -119,12 +122,14 @@ prefix form. The vault can contain both; callers that understand multihash handl
 - **Verdict:** Rejected. The limitations compound as the system scales.
 
 ### Separate address spaces per hash function
+
 - **Pro:** No encoding change; just use different vault directories
 - **Con:** Requires external routing logic to know which space an address belongs to
 - **Con:** Cross-hash-function references require out-of-band convention
 - **Verdict:** Rejected. Self-describing addresses are strictly cleaner.
 
 ### Use IPFS CIDs directly
+
 - **Pro:** Standard, tooling exists, interoperable with IPFS ecosystem
 - **Con:** CIDs include content type and version fields beyond hash function — more than we need
 - **Con:** Introduces IPFS as a dependency or reference implementation
@@ -136,12 +141,14 @@ prefix form. The vault can contain both; callers that understand multihash handl
 ## Consequences
 
 **Immediate:**
+
 - `vault.put(type, payload)` returns `blake3:<hex>` (prefix added)
 - `vault.get("blake3:<hex>")` works; `vault.get("<hex>")` still works (backward compat)
 - Hash-bridge expression type `meta/hash-bridge` is defined
 - Address comparison must strip or normalize the prefix before comparing
 
 **Ongoing:**
+
 - ZK circuits that need Poseidon addressing can store expressions at both addresses with
   a hash-bridge linking them
 - Federation between systems: the function_id is the shared language — two systems agree
