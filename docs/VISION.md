@@ -30,6 +30,23 @@ You can reason about code the same way you reason about facts. You can trace its
 
 This is not a new idea. It's a synthesis of ideas that have existed separately for decades.
 
+### The Genetic Encoding
+
+The foundational metaphor:
+
+| Genetic | Synapse | Function |
+|---------|---------|----------|
+| DNA | Blob | Heritable pattern |
+| RNA | Projection | Transcription to runtime |
+| Protein | Execution | Functional output |
+| Genome | Vault | All patterns |
+| Cell | Scope | Containment + capability |
+
+Synapse is genetic encoding for intelligence: patterns persist, are selected by fitness, and expressed through runtime projection.
+
+See [docs/METAPHORS.md](docs/METAPHORS.md) for all metaphor systems.
+See [docs/VANTAGES.md](docs/VANTAGES.md) for the formal vantage framework.
+
 ---
 
 ## What Synapse Is Synthesizing

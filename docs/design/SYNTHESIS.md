@@ -2,6 +2,8 @@
 
 > Integrating: MOO, Smalltalk, BEAM, Scope, Object Model, Tools, Dynamic Execution, Agents
 
+See [docs/VANTAGES.md](../VANTAGES.md) for the formal vantage framework — disciplinary traditions that offer different ways of understanding Synapse.
+
 ---
 
 ## The Core Unification
