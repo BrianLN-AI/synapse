@@ -169,7 +169,7 @@ cd synapse
 cat λ.md
 
 # Check out the latest council release to run the fabric
-git checkout council/f_14
+git checkout council/f_20
 
 # Bootstrap the system
 python seed.py promote manifest.json
@@ -239,11 +239,16 @@ for the full multi-agent convergence protocol.
 | Document | Purpose |
 |:---------|:--------|
 | [λ.md](λ.md) | Bootstrap record — start here |
+| [docs/genesis/f(undefined).md](docs/genesis/f(undefined).md) | Genesis specification — GOKR, 4-layer stack, ABI, bootstrap |
+| [docs/genesis/METAPHORS.md](docs/genesis/METAPHORS.md) | Founding metaphors — synapse, mycelium, rhizome, wavefunction |
 | [docs/INVARIANTS.md](docs/INVARIANTS.md) | Five invariants × six vantages — full formal treatment |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Protocol specification — runtime-agnostic contracts |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security audit findings |
 | [LOG.md](LOG.md) | Narrative arc f_0 → f_11, design decisions, what was learned |
 | [docs/adr/](docs/adr/) | All architectural decisions (ADR-001 through ADR-016) |
 | [docs/sessions/](docs/sessions/) | Session transcripts — all AI session history |
 | [ZK_PROTOCOL.md](ZK_PROTOCOL.md) | ZK proof layer specification |
+| [docs/PROCESS.md](docs/PROCESS.md) | Iteration cycle, worktree protocol, evolution labels |
 | [AGENTS.md](AGENTS.md) | Agent directives — how sessions orient and operate |
 
 ---

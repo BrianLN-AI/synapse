@@ -12,7 +12,7 @@ The **D-JIT (Distributed Just-In-Time) Logic Fabric** is a content-addressed, pr
 
 ## 3. Logical Architecture: The 4-Layer Stack
 1. **Interface (The Proxy):** Captures intent and translates it into a Protocol Contract.
-2. **Discovery (The Librarian):** Resolves Content-Hashes (SHA-256) across vault tiers.
+2. **Discovery (The Librarian):** Resolves Content-Hashes across vault tiers.
 3. **Planning (The Broker):** Performs "Market Arbitrage" (Latency vs. Cost vs. Trust).
 4. **Binding (The Engine):** Physically injects the Blob into a scrubbed sandbox.
 
@@ -28,7 +28,7 @@ To prevent infinite recursion (where Discovery needs Discovery to find Discovery
 * **The Root Pointer:** This method bypasses Blob-based Discovery to resolve the initial System Manifest directly from the filesystem.
 
 ## 6. Seed Functional Requirements
-Implement a **Seed CLI/MCP Server** in Python (`seed.py`) and JavaScript (`seed.js`):
-1. **PUT**: Accept Type/Payload -> Hash -> Store in `./blob_vault/`.
+Implement a **Seed CLI/MCP Server**:
+1. **PUT**: Accept Type/Payload -> Content-Address -> Store.
 2. **INVOKE**: Load Hash -> Bind (exec/eval) -> **Verify `result` exists** -> Return.
 3. **TELEMETRY**: Measure latency/memory and `PUT` a 'telemetry/artifact' blob for every run, including any `log()` data.
