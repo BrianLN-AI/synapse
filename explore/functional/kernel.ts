@@ -65,7 +65,12 @@ export const defaultJSEngine: LogicEngine = {
         const process = undefined;
 
         try {
-          return await (async () => { ${payload} })();
+          // Wrap payload to capture 'result' variable
+          return await (async () => { 
+            var result;
+            ${payload}
+            return result;
+          })();
         } catch (e) {
           fabric.log('JS Runtime Error:', e.message);
           throw e;
