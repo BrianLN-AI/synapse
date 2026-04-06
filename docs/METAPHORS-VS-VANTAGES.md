@@ -121,6 +121,159 @@ Constraints:
 
 **Decision:** Keep "vantage" as the working term. It is distinctive and captures the positional aspect.
 
+---
+
+## The Tensor Analogy
+
+Vantages are like tensors:
+
+| Tensor | Metaphor/Vantage |
+|--------|------------------|
+| Invariant tensor | The underlying thing |
+| Components | What each vantage reveals |
+| Coordinate basis | The vantage itself |
+| Transformation rules | How vantage changes what's visible |
+
+**Example: Fitness as a tensor**
+
+```json
+{
+  "fitness_tensor": {
+    "economist": "efficiency × equity",
+    "biologist": "survival × reproduction",
+    "ethicist": "dignity × autonomy",
+    "engineer": "MTBF × performance"
+  }
+}
+```
+
+Same underlying thing. Different components from different vantages.
+
+**Implications:**
+1. **The thing is invariant** — "fitness" exists independent of vantage
+2. **Vantages reveal components** — each vantage shows part of the tensor
+3. **Transformation is predictable** — you can map between vantages
+4. **No vantage sees the whole tensor** — each reveals partial components
+
+---
+
+## Related Mathematical Structures
+
+### Sheaves
+
+Sheaves are locally defined sections that patch together globally.
+
+```
+Local:  economist sees efficiency
+Local:  biologist sees survival
+Global: must cohere into fitness tensor
+```
+
+Sheaf property: Local coherence + consistent restriction = global section.
+
+### Representations
+
+Same structure, different representations.
+
+```
+Same group (fitness) → 
+  economist representation (efficiency × equity) →
+  biologist representation (survival × reproduction) →
+  engineer representation (MTBF × performance)
+```
+
+Group representation theory: Different matrix representations of the same group.
+
+### Probability Parameterizations
+
+Same distribution, different parameterizations.
+
+```
+Same distribution →
+  (μ, σ²) parameterization →
+  (α, β) parameterization →
+  canonical parameterization
+```
+
+Exponential family: Same distribution, different coordinate systems.
+
+### Fourier Transforms
+
+Same signal, different basis.
+
+```
+Time domain:  signal(t)
+Frequency domain: signal(ω)
+```
+
+The signal is invariant. The representation changes.
+
+### Functors
+
+Structure-preserving maps between categories.
+
+```
+Category C → Category D
+Objects: preserved
+Morphisms: preserved
+```
+
+Functors map entire structures while preserving relationships.
+
+### Adjunctions
+
+Pairs of functors that are "best approximation from either side."
+
+```
+F ⊣ G
+F is left adjoint to G
+G is right adjoint to F
+```
+
+Example: Free ⊣ Forgetful — free structure is best left approximation to forgetful.
+
+---
+
+## The Structure
+
+The fitness tensor has:
+
+| Structure | Property |
+|-----------|----------|
+| **Sheaf structure** | Local vantage-components must cohere globally |
+| **Representation theory** | Vantages are different representations |
+| **Invariant** | The "true fitness" independent of vantage |
+| **Transformation rules** | Maps between vantage representations |
+
+---
+
+## Connection to Formalism
+
+This is why formal definitions are hard — we're trying to capture something with sheaf/representation structure in ordinary language.
+
+**The invariant:**
+```
+fitness : Vantage × Blob × Context → ℝ
+fitness(economist, blob, context) = ...
+fitness(biologist, blob, context) = ...
+```
+
+**The tensor:**
+```
+fitness_tensor(blob, context) = {
+  economist: f_e(blob, context),
+  biologist: f_b(blob, context),
+  ...
+}
+```
+
+**The transformation:**
+```
+fitness_biologist = T_{bio←econ}(fitness_economist)
+```
+
+Where T is the transformation rule between representations.
+
 Studying a working system (MOO) gives you a metaphor. The metaphor points to a vantage (Actor Theorist). The vantage gives you a framework for reasoning.
 
 ---
