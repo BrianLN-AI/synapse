@@ -9,52 +9,89 @@
 
 The system is organized into four layers of increasing abstraction and decreasing privilege:
 
-### Layer 0: The Substrate (`SUBSTRATE.md`)
-- **Implementation:** `world_persistent.ts`, `hashing.ts`.
+### Layer 0: The Substrate (`world_persistent.ts`, `hashing.ts`)
 - **Nature:** A BLAKE3 content-addressed persistent image.
-- **Rule:** Existence = Identity. Every bit is immutable and auditable.
+- **Implementation:** Append-only JSONL event log (`world_state.jsonl`).
+- **Rule:** Existence = Identity. Every event is immutable and auditable.
+- **Features:** Providence tracking (ts, cause), Labels (mutable pointers to content-addressed state).
 
-### Layer 1: The Arbiter (`KERNEL.md`)
-- **Implementation:** `kernel.ts`.
+### Layer 1: The Arbiter (`kernel.ts`)
 - **Nature:** The "Fair Arbiter" (Nanokernel).
-- **Role:** Handles context-switching, manages the Engine registry, and facilitates messaging via Namespace Projections.
+- **Role:** 
+  - Handles context-switching between Nodes.
+  - Manages the Engine registry (logic/javascript, logic/lisp).
+  - **AST Auditor:** Deterministic structural verification before execution.
+  - Facilitates messaging via Namespace Projections.
 
-### Layer 2: The Projections (`PROJECTION.md`)
-- **Implementation:** `projection.ts`.
+### Layer 2: The Projections (`projection.ts`)
 - **Nature:** Interface Shadows (`fabric`, `world`, `ai`).
-- **Role:** Maps user-space intents to World-space actions. Strips host mass (console, fetch) to maintain isolation.
+- **Role:** Maps user-space intents to World-space actions. Strips host mass (console, fetch, globalThis) to maintain isolation.
 
-### Layer 3: The Expressions (`WORLD.md`)
-- **Implementation:** `world_state.json`.
-- **Nature:** Units of Logic and State.
-- **Role:** Content-addressed blobs (Verbs) and Nodes (Nouns) that define the system's behavior.
+### Layer 3: The Expressions (World)
+- **Nature:** Units of Logic (Verbs) and State (Nodes).
+- **Implementation:** Content-addressed blobs stored in Substrate.
+- **Formats:** `logic/javascript`, `logic/lisp`, `doc/plan`.
 
 ---
 
-## 2. The Execution Lifecycle (`ENGINE.md`)
+## 2. The Execution Lifecycle
 
 Every message to the World follows a strict 4-phase physical lifecycle:
-1. **Preparation:** Engine translates payload (e.g., TS -> JS) and generates a cached Artifact.
-2. **Projection:** Arbiter injects namespace proxies and sanitizes the scope.
-3. **Reduction:** Logic executes, interacting with the World only through projections.
-4. **Resolution:** Logic assigns to `result`, isolate is dissolved, and value is returned.
+
+```
+1. Preparation:   Engine translates payload → cached Artifact
+                  └─ AST Auditor runs deterministic checks here
+2. Projection:    Arbiter injects namespace proxies (fabric, world, ai)
+3. Reduction:     Logic executes, interacting via projections only
+4. Resolution:    Logic assigns to `result` (or returns), isolate dissolves
+```
 
 ---
 
-## 3. The Mutation Protocol (`VERIFICATION.md`)
+## 3. The Mutation Protocol (`imagine` verb)
 
-Autonomous growth via the **`imagine`** verb follows a high-integrity lifecycle:
-- **Phase 1: Planning:** AI Architect generates logic, state, and test cases.
-- **Phase 2: Audit:** A second AI model reviews the code for Synapse ABI safety.
-- **Phase 3: Trial:** A dry-run execution against the test case in a transient node.
-- **Phase 4: Promotion:** The label (Route) is updated to the new hash (Address).
+Autonomous growth via the **`imagine`** verb:
+
+```
+Planning (AI) → AST Trial → Promotion
+     │              │           │
+     │              │           └─ Root label updated to new Node hash
+     │              └─ Deterministic verification in kernel.ts:prepare
+     └─ AI generates: { newVerbs, newProps, testCase }
+```
+
+**Features:**
+- **Convergence Loop:** Retries on AST failure (up to 3 attempts).
+- **Providence:** Captures `planHash` — the "cause" of every mutation.
+- **Deterministic Verification:** AST-only (no AI semantic audit) — faster, deterministic.
 
 ---
 
 ## 4. Primal Service Verbs
 
-- **`fabric.name/resolve`**: Identity management.
-- **`fabric.call`**: Recursive messaging.
-- **`fabric.promote`**: Evolutionary commitment.
-- **`world.lookup`**: Service discovery via the Root Node (#0).
-- **`ai.inference`**: The Intelligence Bridge.
+- **`fabric.name`**: Content-address a new expression → returns hash.
+- **`fabric.resolve`**: Retrieve expression by hash.
+- **`fabric.call`**: Recursive messaging (invoke verb on node).
+- **`fabric.promote`**: Update label to new hash (evolutionary commitment).
+- **`fabric.log`**: Debugging output via proxy.
+- **`world.search`**: Query the World for matching verbs.
+- **`ai.inference`**: The Intelligence Bridge (Groq/Llama).
+
+---
+
+## 5. ABI Contract
+
+Every verb must conform to the Synapse ABI:
+
+```javascript
+// Valid: return statement
+return { pong: true };
+
+// Valid: result assignment  
+result = { pong: true };
+
+// Forbidden: console, fetch, globalThis, process, eval
+```
+
+The **AST Auditor** enforces this deterministically:
+- Parse → Walk AST → Check for forbidden globals, ensure output assignment.

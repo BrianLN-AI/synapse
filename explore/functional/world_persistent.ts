@@ -1,34 +1,48 @@
-import { Hash, Expression } from './world';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { Hash } from './world';
+import { readFileSync, appendFileSync, existsSync } from 'fs';
 import { hashExpression } from './hashing';
 
+export type Event = 
+  | { type: 'put', hash: Hash, expression: any, ts: string, cause?: Hash }
+  | { type: 'label', name: string, hash: Hash, ts: string, cause?: Hash };
+
 /** 
- * createPersistentWorld: A World that persists to a local file for the session.
+ * createPersistentWorld: A World that persists as an append-only JSONL event log with provenance.
  */
 export function createPersistentWorld(filePath: string) {
-  let expressions = new Map<Hash, any>();
-  let labels = new Map<string, Hash>(); // Labels: Name -> Latest Hash
+  const expressions = new Map<Hash, any>();
+  const labels = new Map<string, Hash>();
 
+  // 1. Replay History
   if (existsSync(filePath)) {
-    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
-    expressions = new Map(Object.entries(data.expressions || {}));
-    labels = new Map(Object.entries(data.labels || {}));
+    const lines = readFileSync(filePath, 'utf-8').split('\n');
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const event: Event = JSON.parse(line);
+        if (event.type === 'put') {
+          expressions.set(event.hash, event.expression);
+        } else if (event.type === 'label') {
+          labels.set(event.name, event.hash);
+        }
+      } catch (e) {
+        console.error(`[SUBSTRATE] Corrupt event skipped: ${line}`);
+      }
+    }
   }
 
-  const save = () => {
-    const data = {
-      expressions: Object.fromEntries(expressions),
-      labels: Object.fromEntries(labels)
-    };
-    writeFileSync(filePath, JSON.stringify(data, null, 2));
+  const logEvent = (event: Omit<Event, 'ts'>) => {
+    const timestampedEvent = { ...event, ts: new Date().toISOString() };
+    appendFileSync(filePath, JSON.stringify(timestampedEvent) + '\n');
   };
 
   return {
-    name: async (expression: any) => {
-      // Invariant I: Address = Multihash(Content)
+    name: async (expression: any, cause?: Hash) => {
       const id = hashExpression(expression);
-      expressions.set(id, expression);
-      save();
+      if (!expressions.has(id)) {
+        expressions.set(id, expression);
+        logEvent({ type: 'put', hash: id, expression, cause });
+      }
       return id;
     },
 
@@ -36,17 +50,15 @@ export function createPersistentWorld(filePath: string) {
       return expressions.get(id);
     },
 
-    // Labels: Mutable pointers for a moving World
-    setLabel: async (name: string, hash: Hash) => {
+    setLabel: async (name: string, hash: Hash, cause?: Hash) => {
       labels.set(name, hash);
-      save();
+      logEvent({ type: 'label', name, hash, cause });
     },
 
     getLabel: async (name: string) => {
       return labels.get(name);
     },
 
-    // God View: List all expressions
     list: async () => {
       return Object.fromEntries(expressions);
     }

@@ -8,15 +8,17 @@ import { execSync } from 'child_process';
  * Hardened Codemode Harness
  */
 
-const WORLD_FILE = '/Users/bln/play/synapse/explore/functional/world_state.json';
+const WORLD_FILE = '/Users/bln/play/synapse/explore/functional/world_state.jsonl';
 const world = createPersistentWorld(WORLD_FILE);
 
 const inferenceProvider = async (prompt: string): Promise<string> => {
   console.log(`[HARNESS] Calling AI...`);
   try {
     const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\n/g, ' ');
-    const output = execSync(`ai sonnet --no-daemon "${escapedPrompt}"`, { encoding: 'utf-8' });
-    return output.trim();
+    const output = execSync(`ai groq/llama-3.3-70b-versatile --no-daemon "${escapedPrompt}"`, { encoding: 'utf-8' });
+    // Strip ANSI codes and metadata
+    const cleanOutput = output.replace(/\u001b\[[0-9;]*m/g, '').replace(/^\[AI - Model:.*\]/i, '').trim();
+    return cleanOutput;
   } catch (e) {
     console.error(`[HARNESS] AI Inference Failed:`, e);
     return "Error: AI Inference unavailable.";
