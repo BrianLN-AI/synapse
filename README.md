@@ -239,17 +239,19 @@ for the full multi-agent convergence protocol.
 | Document | Purpose |
 |:---------|:--------|
 | [λ.md](λ.md) | Bootstrap record — start here |
-| [docs/genesis/f(undefined).md](docs/genesis/f(undefined).md) | Genesis specification — GOKR, 4-layer stack, ABI, bootstrap |
-| [docs/genesis/METAPHORS.md](docs/genesis/METAPHORS.md) | Founding metaphors — synapse, mycelium, rhizome, wavefunction |
-| [docs/INVARIANTS.md](docs/INVARIANTS.md) | Five invariants × six vantages — full formal treatment |
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Protocol specification — runtime-agnostic contracts |
+| [docs/VISION.md](docs/VISION.md) | The thesis — what Synapse is and why |
+| [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md) | Current state map — everything we know |
+| [docs/METAPHORS.md](docs/METAPHORS.md) | Unified metaphor map — all systems of metaphor |
+| [docs/genesis/f(undefined).md](docs/genesis/f(undefined).md) | Genesis specification |
+| [docs/genesis/METAPHORS.md](docs/genesis/METAPHORS.md) | Founding metaphors |
+| [docs/design/SYNTHESIS.md](docs/design/SYNTHESIS.md) | Technical synthesis — unified model |
+| [docs/INVARIANTS.md](docs/INVARIANTS.md) | Constitutional invariants |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Protocol specification |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security audit findings |
-| [LOG.md](LOG.md) | Narrative arc f_0 → f_11, design decisions, what was learned |
-| [docs/adr/](docs/adr/) | All architectural decisions (ADR-001 through ADR-016) |
-| [docs/sessions/](docs/sessions/) | Session transcripts — all AI session history |
-| [ZK_PROTOCOL.md](ZK_PROTOCOL.md) | ZK proof layer specification |
-| [docs/PROCESS.md](docs/PROCESS.md) | Iteration cycle, worktree protocol, evolution labels |
-| [AGENTS.md](AGENTS.md) | Agent directives — how sessions orient and operate |
+| [docs/PROCESS.md](docs/PROCESS.md) | Iteration cycle, worktree protocol |
+| [docs/adr/](docs/adr/) | Architectural decisions |
+| [docs/explore/](docs/explore/) | Prior art — MOO, Smalltalk, BEAM, biology, ethics, physics |
+| [docs/sessions/](docs/sessions/) | Session transcripts |
 
 ---
 
