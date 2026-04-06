@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "artifact_id": "ADR-008",
+    "vantage_id": "Economist",
+    "timestamp": "2026-04-06T15:10:00Z"
+  },
+  "nodes": [
+    {
+      "id": "ECO-008-AX1",
+      "type": "Axiom",
+      "content": "Price signals drive resource allocation efficiency.",
+      "justification": "Fundamental economic axiom.",
+      "provenance": "TRAINED"
+    },
+    {
+      "id": "ECO-008-F1",
+      "type": "Fact",
+      "content": "Feedback score behaves as a price signal.",
+      "justification": "Feedback modulates blob adoption based on quality.",
+      "provenance": "UNTRAINED"
+    },
+    {
+      "id": "ECO-008-C1",
+      "type": "Conflict",
+      "content": "Potential for regulatory capture by high-trust reviewers.",
+      "justification": "Reviewers optimize for their own efficiency at the expense of system quality.",
+      "provenance": "TRAINED"
+    }
+  ],
+  "edges": [
+    {
+      "source": "ECO-008-F1",
+      "target": "ECO-008-AX1",
+      "relation": "supports"
+    },
+    {
+      "source": "ECO-008-C1",
+      "target": "ECO-008-F1",
+      "relation": "conflicts_with"
+    }
+  ]
+}

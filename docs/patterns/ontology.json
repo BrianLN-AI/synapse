@@ -1,0 +1,17 @@
+{
+  "ontology": {
+    "entities": {
+      "Artifact": "The target of analysis (e.g., ADR-013, IPFS)",
+      "Vantage": "The formal discipline (e.g., Economist, Security)",
+      "Finding": "A structured observation (Fact, Axiom, etc.)",
+      "Constraint": "A limit or boundary on the system state"
+    },
+    "relations": {
+      "conflicts_with": "Logical negation or strategic tension",
+      "supports": "Empirical or logical justification",
+      "refines": "Provides higher resolution to a finding",
+      "entails": "Logical implication",
+      "contradicts": "Direct falsification"
+    }
+  }
+}

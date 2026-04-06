@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "artifact_id": "ADR-010",
+    "vantage_id": "Security",
+    "timestamp": "2026-04-06T15:20:00Z"
+  },
+  "nodes": [
+    {
+      "id": "SEC-010-AX1",
+      "type": "Axiom",
+      "content": "A system's security is no stronger than its root of trust.",
+      "justification": "Fundamental security axiom.",
+      "provenance": "TRAINED"
+    },
+    {
+      "id": "SEC-010-F1",
+      "type": "Fact",
+      "content": "The Bootstrap Anchor (Genesis Governance) is self-grounding.",
+      "justification": "ADR-010 design spec.",
+      "provenance": "TRAINED"
+    },
+    {
+      "id": "SEC-010-C1",
+      "type": "Conflict",
+      "content": "Root of Trust Hijack risk at genesis.",
+      "justification": "Self-grounding creates a critical vulnerability if the initial blob is compromised.",
+      "provenance": "UNTRAINED"
+    }
+  ],
+  "edges": [
+    {
+      "source": "SEC-010-F1",
+      "target": "SEC-010-AX1",
+      "relation": "contradicts"
+    },
+    {
+      "source": "SEC-010-C1",
+      "target": "SEC-010-F1",
+      "relation": "supports"
+    }
+  ]
+}

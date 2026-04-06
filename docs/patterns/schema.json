@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Synapse Vantage Finding Schema",
+  "type": "object",
+  "required": ["metadata", "nodes", "edges"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["artifact_id", "vantage_id", "timestamp"],
+      "properties": {
+        "artifact_id": { "type": "string" },
+        "vantage_id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "content", "provenance"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "enum": ["Fact", "Axiom", "Measurement", "Conflict", "Inference"] },
+          "content": { "type": "string" },
+          "justification": { "type": "string" },
+          "provenance": { "enum": ["UNTRAINED", "TRAINED", "EXPERT-VALIDATED", "ASP-confirmed"] }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "relation"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "relation": { "enum": ["conflicts_with", "supports", "refines", "entails", "contradicts"] }
+        }
+      }
+    }
+  }
+}
