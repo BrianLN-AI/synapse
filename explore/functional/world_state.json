@@ -1,0 +1,396 @@
+{
+  "expressions": {
+    "b3:060fc1e178e2b18452986ea1044db6c86f2bdaf72be314ba3aa16b1cb7cd488c": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {}
+    },
+    "b3:5eeacbb58966e46965874065cc5c1620efef50e87d1d6916d4a8851464ce11ad": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Thinking about:', intent);\n  const planRaw = await ai.inference({ prompt: 'Plan mutation for: ' + intent + '. Return JSON {newVerbs, newProps, explanation}. Use context and result.' });\n  const plan = JSON.parse(planRaw);\n  const verbHashes = {};\n  for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n    verbHashes[name] = await fabric.name({ type: 'logic/javascript', payload: code });\n  }\n  const newNode = {\n    props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n    verbs: { ...context.verbs, ...verbHashes }\n  };\n  delete newNode.props.verbs; \n  const newNodeHash = await fabric.name(newNode);\n  await fabric.promote('root', newNodeHash);\n  result = { newNodeHash, explanation: plan.explanation };\n"
+    },
+    "b3:374b9802284a1e578e06a66d0aab309afa3fdea766a4e872adb5ef1b34574c0b": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {
+        "imagine": "b3:5eeacbb58966e46965874065cc5c1620efef50e87d1d6916d4a8851464ce11ad"
+      }
+    },
+    "b3:f551344e9a9fad74344bb2cc740bd0f8a94c99e8e3dc1fb82b43a76e6a96bd8c": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a history verb that returns a JSON list of all verbs currently on the node and their hashes."
+      },
+      "verbs": {
+        "imagine": "b3:5eeacbb58966e46965874065cc5c1620efef50e87d1d6916d4a8851464ce11ad"
+      }
+    },
+    "b3:9bba4aa02e26c4453799da9995af946d4c0a992c6733217722d3e6e60cc0f7c1": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a history verb that returns a JSON object containing all verbs on the current node and their hashes."
+      },
+      "verbs": {
+        "imagine": "b3:5eeacbb58966e46965874065cc5c1620efef50e87d1d6916d4a8851464ce11ad"
+      }
+    },
+    "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f": {
+      "type": "logic/javascript",
+      "payload": "result = { verbs: context.verbs };"
+    },
+    "b3:1dc07adb71ccbcb693b9248faa71d45d41cd229e9758adefc45c7cbfffc1590f": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {
+        "imagine": "b3:5eeacbb58966e46965874065cc5c1620efef50e87d1d6916d4a8851464ce11ad",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f"
+      }
+    },
+    "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7": {
+      "type": "logic/javascript",
+      "payload": "result = await fabric.list();"
+    },
+    "b3:2dbb7bce9fbcd8e8776f6b1f6f9950c201917978a3030b14827849a79a918612": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {
+        "imagine": "b3:5eeacbb58966e46965874065cc5c1620efef50e87d1d6916d4a8851464ce11ad",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7"
+      }
+    },
+    "b3:46942f8f8d9885a8575096c8943b432e555c0f7390cfc85b72221607de7b5cac": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Thinking about:', intent);\n  \n  const prompt = `Plan a mutation for the current content-addressed node.\nIntent: ${intent}\nContext: ${JSON.stringify(context)}\n\nOutput ONLY raw JSON (no backticks):\n{\n  \"newVerbs\": { \"name\": \"code\" },\n  \"newProps\": { \"key\": \"value\" },\n  \"explanation\": \"...\"\n}`;\n\n  const raw = await ai.inference(prompt);\n  \n  // Robust JSON parsing (strip backticks if the AI provides them)\n  const clean = raw.replace(/```json/g, '').replace(/```/g, '').trim();\n  \n  try {\n    const plan = JSON.parse(clean);\n    const verbHashes = {};\n    for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n      verbHashes[name] = await fabric.name({ type: 'logic/javascript', payload: code });\n    }\n    \n    const newNode = {\n      props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n      verbs: { ...context.verbs, ...verbHashes }\n    };\n    delete newNode.props.verbs; \n\n    const newNodeHash = await fabric.name(newNode);\n    await fabric.promote('root', newNodeHash);\n    \n    result = { newNodeHash, explanation: plan.explanation };\n  } catch (e) {\n    fabric.log('[IMAGINE] Error:', e.message);\n    throw e;\n  }\n"
+    },
+    "b3:7a36810878c56951b37b1aedefd5154aaff9b17892b091024826d2ab7e27e5ea": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {
+        "imagine": "b3:46942f8f8d9885a8575096c8943b432e555c0f7390cfc85b72221607de7b5cac",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7"
+      }
+    },
+    "b3:10dc19729898f8c520d4e8b5fc93aff5c4f7a3a5136cf6a1a92989f20cb08a6e": {
+      "type": "logic/javascript",
+      "payload": "\n  const abi = await fabric.resolve('b3:7a6deee6d6ff15eb...'); // I'll just hardcode for now or use context\n  result = { ...context, abi: 'ABI Rules: 1. Use context. 2. Assign to result. 3. Return new state to update. 4. No console.' };\n"
+    },
+    "b3:ab4a2fee7e39c398b2b38f69c865100326db3c19378b57ce14eaf5403a6bc19b": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {
+        "imagine": "b3:46942f8f8d9885a8575096c8943b432e555c0f7390cfc85b72221607de7b5cac",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "setup": "b3:10dc19729898f8c520d4e8b5fc93aff5c4f7a3a5136cf6a1a92989f20cb08a6e"
+      }
+    },
+    "b3:ee8938c39a6c1070da2f8058487b6049be9cd9fde0ffb06212bdf651b25bf330": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Planning mutation for:', intent);\n  \n  const prompt = `Master Architect: Plan mutation. \n    Intent: ${intent}\n    Context: ${JSON.stringify(context)}\n    \n    ABI RULES:\n    - Use 'context' for state.\n    - Assign final output to 'result'.\n    - No console/fetch/globalThis.\n    \n    Return ONLY JSON:\n    {\n      \"newVerbs\": { \"name\": \"code\" },\n      \"newProps\": { \"key\": \"value\" },\n      \"testCase\": { \"input\": \"value\" },\n      \"explanation\": \"...\"\n    }\n  `;\n\n  const raw = await ai.inference(prompt);\n  const plan = JSON.parse(raw.replace(/```json/g, '').replace(/```/g, '').trim());\n  \n  const verbHashes = {};\n  for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n    // TRIAL EXECUTION\n    fabric.log('[IMAGINE] Validating verb:', name);\n    try {\n      const trialLogicHash = await fabric.name({ type: 'logic/javascript', payload: code });\n      const trialNodeHash = await fabric.name({ props: plan.testCase || {}, verbs: {} });\n      \n      // Perform a Trial Message\n      await fabric.call(trialLogicHash, trialNodeHash);\n      fabric.log('[IMAGINE] Validation Success:', name);\n      \n      verbHashes[name] = trialLogicHash;\n    } catch (e) {\n      fabric.log('[IMAGINE] Validation FAILED for:', name, '-', e.message);\n      throw new Error('Mutation rejected: Logic failed verification.');\n    }\n  }\n  \n  const newNode = {\n    props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n    verbs: { ...context.verbs, ...verbHashes }\n  };\n  delete newNode.props.verbs; \n\n  const newNodeHash = await fabric.name(newNode);\n  await fabric.promote('root', newNodeHash);\n  \n  result = { newNodeHash, explanation: plan.explanation };\n"
+    },
+    "b3:2d07177c56e633f03817266dc2cf31156edfadd0d27ea9bcb1b468897a5af8a9": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric."
+      },
+      "verbs": {
+        "imagine": "b3:ee8938c39a6c1070da2f8058487b6049be9cd9fde0ffb06212bdf651b25bf330",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7"
+      }
+    },
+    "b3:1d6029a623ce73a139bf1fd88315382be088f45c33059e229ecb4c447aaac8d4": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a ping verb that returns pong and the number of verbs on the node."
+      },
+      "verbs": {
+        "imagine": "b3:ee8938c39a6c1070da2f8058487b6049be9cd9fde0ffb06212bdf651b25bf330",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7"
+      }
+    },
+    "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02": {
+      "type": "logic/javascript",
+      "payload": "const verbCount = Object.keys(context.verbs).length; result = { pong: true, verbCount };"
+    },
+    "b3:10e01118e1b1198b5b5a36c0d85a4de707bf92069ace36b76163a05360510175": {
+      "props": {
+        "input": "ping"
+      },
+      "verbs": {}
+    },
+    "b3:ad875be3bd35c3c4e8d61ee8cdd1e5a642dfb36d1fb22148dc752be67d24182c": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a ping verb that returns pong and the number of verbs on the node.",
+        "lastIntent": "Add a ping verb that returns pong and the number of verbs on the node."
+      },
+      "verbs": {
+        "imagine": "b3:ee8938c39a6c1070da2f8058487b6049be9cd9fde0ffb06212bdf651b25bf330",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02"
+      }
+    },
+    "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Thinking about:', intent);\n  \n  // PHASE 1: PLANNING\n  const planningPrompt = `Plan a mutation for the current node.\n    Intent: ${intent}\n    Context: ${JSON.stringify(context)}\n    \n    Output ONLY JSON:\n    {\n      \"newVerbs\": { \"name\": \"code\" },\n      \"newProps\": { \"key\": \"value\" },\n      \"testCase\": { \"input\": \"value\" },\n      \"explanation\": \"...\"\n    }`;\n\n  const rawPlan = await ai.inference(planningPrompt);\n  const plan = JSON.parse(rawPlan.replace(/```json/g, '').replace(/```/g, '').trim());\n  \n  const verbHashes = {};\n  for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n    \n    // PHASE 2: SECURITY REVIEW\n    fabric.log('[IMAGINE] Security Audit for:', name);\n    const auditPrompt = `Security Auditor: Review this logic for Synapse ABI compliance.\n      Rules:\n      1. No access to globalThis, console, fetch, process.\n      2. No infinite loops or heavy recursion.\n      3. No leaking of 'context' secrets.\n      4. Must assign to 'result'.\n      \n      Code: ${code}\n      \n      Output ONLY raw JSON: { \"safe\": true/false, \"reason\": \"...\" }`;\n      \n    const auditRaw = await ai.inference(auditPrompt);\n    const audit = JSON.parse(auditRaw.replace(/```json/g, '').replace(/```/g, '').trim());\n    \n    if (!audit.safe) {\n      fabric.log('[IMAGINE] SECURITY REJECTED:', name, '-', audit.reason);\n      throw new Error('Security Violation: ' + audit.reason);\n    }\n    fabric.log('[IMAGINE] Security Pass:', name);\n\n    // PHASE 3: TRIAL EXECUTION\n    fabric.log('[IMAGINE] Trial Run:', name);\n    try {\n      const trialLogicHash = await fabric.name({ type: 'logic/javascript', payload: code });\n      const trialNodeHash = await fabric.name({ props: plan.testCase || {}, verbs: {} });\n      await fabric.call(trialLogicHash, trialNodeHash);\n      fabric.log('[IMAGINE] Trial Success:', name);\n      verbHashes[name] = trialLogicHash;\n    } catch (e) {\n      fabric.log('[IMAGINE] Trial FAILED:', name, '-', e.message);\n      throw new Error('Verification failed: ' + e.message);\n    }\n  }\n  \n  // PHASE 4: PROMOTION\n  const newNode = {\n    props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n    verbs: { ...context.verbs, ...verbHashes }\n  };\n  delete newNode.props.verbs; \n  const newNodeHash = await fabric.name(newNode);\n  await fabric.promote('root', newNodeHash);\n  \n  result = { newNodeHash, explanation: plan.explanation };\n"
+    },
+    "b3:2f101bb4a14072f773d6ea71066e50155e74e2d34a6d9e7dd01ad9f834ea10b0": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a ping verb that returns pong and the number of verbs on the node.",
+        "lastIntent": "Add a ping verb that returns pong and the number of verbs on the node."
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02"
+      }
+    },
+    "b3:8173ad9e236aa2c2de7bce141a6633e8672a719be6aca5b6434933ea3ddab59f": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a ping verb that returns pong and the number of verbs on the node."
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02"
+      }
+    },
+    "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4": {
+      "type": "logic/javascript",
+      "payload": "() => new Date().toISOString()"
+    },
+    "b3:44cf7cd74e55efdb5241faf61606a0a6dda5d45509262d92251b16b7ffd11bea": {
+      "props": {
+        "input": "tell_time",
+        "expectedPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+      },
+      "verbs": {}
+    },
+    "b3:c6ce90bd10073696dff22262d44dcff4fb9908305c46b0fc2db86c7e625e95f1": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4"
+      }
+    },
+    "b3:caa2087cdacf507c22500ed90c27797667579a490e71dc5d229bdfb9681d98c5": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a search verb that uses fabric.list() to get all expressions, uses ai.inference to find the verb or node that best matches a semantic query provided in context.query, and returns the result.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4"
+      }
+    },
+    "b3:79d5f931b2a98ef5217691490dbaa0c1421e519ac3a46ce17721ac4c4aa732d2": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a search verb. 1. Get world state via fabric.list(). 2. Create a text summary of all verbs in the world. 3. Use ai.inference to find the verb that matches context.query. 4. Assign the final JSON match to result.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4"
+      }
+    },
+    "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de": {
+      "type": "logic/javascript",
+      "payload": "\n  const query = context.query;\n  const worldData = await fabric.list();\n  \n  // 1. Build a summary of available logic\n  let catalog = '';\n  for (const [hash, expr] of Object.entries(worldData)) {\n    if (expr.verbs) {\n      catalog += 'Node ' + hash + ' has verbs: ' + Object.keys(expr.verbs).join(', ') + '\\n';\n    }\n  }\n\n  fabric.log('[SEARCH] Querying AI for best match...');\n  const matchRaw = await ai.inference('Which verb hash in this catalog matches intent \"' + query + '\"?\\n' + catalog + '\\nReturn ONLY the hash.');\n  \n  result = { query, match: matchRaw.trim() };\n"
+    },
+    "b3:1c082e27f372e8616480f09a1490202ac210afed12579c4acc4d58b32e8c9e9c": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:37bd893eb4e156b741e7804294920d4172db930a0409d015f988f3e64e1ca9a3": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string.",
+        "query": "get the current time"
+      },
+      "verbs": {
+        "imagine": "b3:024384d1e039e15a644b7abdbf103227a9e2dc652c9e91290a5e97a575bb4418",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:52e23395a4f068c1627a29faa0b6f16e7c5937c80c28eef97c69a6bccf2a9dda": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Thinking about:', intent);\n  \n  // Architectural Hints derived from the Arbiter/Substrate\n  const hints = {\n    substrate: 'BLAKE3 content-addressed persistent image.',\n    engine: 'logic/javascript (isolated JS runtime via new Function).',\n    abi: 'Synapse ABI: system namespaces [fabric, world, ai], context object, result assignment.',\n    topology: 'Graph of Nodes (props + verbs) and atomic Expressions.',\n    conventions: 'Verbs should be small, pure functions that return new state to evolve Nodes.'\n  };\n\n  // PHASE 1: PLANNING (Deep Context)\n  const planningPrompt = `\n    You are the Master Architect of the Synapse D-JIT Fabric.\n    \n    SYSTEM ARCHITECTURE:\n    - Substrate: ${hints.substrate}\n    - Engine: ${hints.engine}\n    - ABI: ${hints.abi}\n    - Topology: ${hints.topology}\n    \n    CURRENT SCOPE:\n    - Node State: ${JSON.stringify(context.props || context)}\n    - Available Verbs: ${Object.keys(context.verbs || {}).join(', ')}\n    \n    TASK: Plan a mutation for this Node based on User Intent.\n    USER INTENT: ${intent}\n    \n    CONSTRAINTS:\n    1. Verbs MUST use 'context' to read state and assign output to 'result'.\n    2. To update the Node, return a JSON object representing the new state.\n    3. No access to host globals (console, fetch). Use 'fabric.log'.\n    \n    Output ONLY JSON:\n    {\n      \"newVerbs\": { \"verbName\": \"code_string\" },\n      \"newProps\": { \"key\": \"value\" },\n      \"testCase\": { \"props\": {}, \"args\": {} },\n      \"explanation\": \"...\"\n    }\n  `;\n\n  const rawPlan = await ai.inference(planningPrompt);\n  const plan = JSON.parse(rawPlan.replace(/```json/g, '').replace(/```/g, '').trim());\n  \n  const verbHashes = {};\n  for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n    \n    // PHASE 2: SECURITY AUDIT (Context-Aware)\n    fabric.log('[IMAGINE] Auditing:', name);\n    const auditPrompt = `Security Auditor: Review this ${hints.engine} code for ABI compliance.\n      Code: ${code}\n      Rules: No forbidden globals, no infinite loops, must assign to 'result'.\n      Output ONLY JSON: { \"safe\": true/false, \"reason\": \"...\" }`;\n      \n    const auditRaw = await ai.inference(auditPrompt);\n    const audit = JSON.parse(auditRaw.replace(/```json/g, '').replace(/```/g, '').trim());\n    \n    if (!audit.safe) throw new Error('Security Violation: ' + audit.reason);\n\n    // PHASE 3: TRIAL EXECUTION\n    fabric.log('[IMAGINE] Trial Run:', name);\n    const trialLogicHash = await fabric.name({ type: 'logic/javascript', payload: code });\n    const trialNodeHash = await fabric.name({ props: plan.testCase?.props || {}, verbs: {} });\n    await fabric.call(trialLogicHash, trialNodeHash);\n    verbHashes[name] = trialLogicHash;\n  }\n  \n  // PHASE 4: PROMOTION\n  const newNode = {\n    props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n    verbs: { ...context.verbs, ...verbHashes }\n  };\n  delete newNode.props.verbs; \n  const newNodeHash = await fabric.name(newNode);\n  await fabric.promote('root', newNodeHash);\n  \n  result = { newNodeHash, explanation: plan.explanation };\n"
+    },
+    "b3:ecdb110ed1d821fdde79fb21e9f645aef3dfad58d0ede3ced56d8b5bf621faf0": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:52e23395a4f068c1627a29faa0b6f16e7c5937c80c28eef97c69a6bccf2a9dda",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:37f7c2f8442f22cd4f0e07fc8edddf4d4d143f0c47c1a55b53eb273254e07e93": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Waking up for intent:', intent);\n  \n  // PHASE 0: DISCOVERY (Self-Scope Audit)\n  let discovery = 'No external search available in this scope.';\n  if (context.verbs.search) {\n    fabric.log('[IMAGINE] Found search capability. Querying...');\n    const searchRes = await world.search({ query: intent });\n    discovery = 'World Search Results: ' + JSON.stringify(searchRes);\n  } else if (context.verbs.list) {\n    fabric.log('[IMAGINE] Found list capability. Scanning...');\n    const listRes = await world.list();\n    discovery = 'World Expression List: ' + JSON.stringify(Object.keys(listRes));\n  }\n\n  // PHASE 1: PLANNING (Grounded in Discovery)\n  const planningPrompt = `\n    You are the Master Architect.\n    \n    ARCHITECTURE: BLAKE3 Substrate, Synapse ABI, logic/javascript Engine.\n    \n    DISCOVERY DATA: ${discovery}\n    \n    CURRENT NODE: ${JSON.stringify(context)}\n    \n    INTENT: ${intent}\n    \n    Task: Plan mutation. Reuse discovered hashes if possible.\n    Output ONLY JSON: { \"newVerbs\": {}, \"newProps\": {}, \"testCase\": {}, \"explanation\": \"\" }\n  `;\n\n  const rawPlan = await ai.inference(planningPrompt);\n  const plan = JSON.parse(rawPlan.replace(/```json/g, '').replace(/```/g, '').trim());\n  \n  const verbHashes = {};\n  for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n    // PHASE 2: SECURITY\n    const auditRaw = await ai.inference(`Security Audit: ${code}. Output {safe:true/false, reason}`);\n    const audit = JSON.parse(auditRaw.replace(/```json/g, '').replace(/```/g, '').trim());\n    if (!audit.safe) throw new Error('Audit Rejected: ' + audit.reason);\n\n    // PHASE 3: TRIAL\n    const trialLogic = await fabric.name({ type: 'logic/javascript', payload: code });\n    const trialNode = await fabric.name({ props: plan.testCase || {}, verbs: {} });\n    await fabric.call(trialLogic, trialNode);\n    verbHashes[name] = trialLogic;\n  }\n  \n  // PHASE 4: PROMOTION\n  const newNode = {\n    props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n    verbs: { ...context.verbs, ...verbHashes }\n  };\n  delete newNode.props.verbs; \n  const newNodeHash = await fabric.name(newNode);\n  await fabric.promote('root', newNodeHash);\n  \n  result = { newNodeHash, explanation: plan.explanation };\n"
+    },
+    "b3:b2c554b5c3649eb985047b687b23242d18cdab55fe4e944f27e7d55f74adb2b6": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:37f7c2f8442f22cd4f0e07fc8edddf4d4d143f0c47c1a55b53eb273254e07e93",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:189c86255c1bfea3fa1498d7c4b01862cabaed5f108c42d9db23bbbe332b835e": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a help service that returns a human-readable explanation of every verb on this node, including their hashes.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:37f7c2f8442f22cd4f0e07fc8edddf4d4d143f0c47c1a55b53eb273254e07e93",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:e97220a3f4890cf3be8e1d2e8f79e56de5e3435d39dac4cbca20eb70d51e9895": {
+      "type": "logic/javascript",
+      "payload": "\n  const intent = context.prompt;\n  fabric.log('[IMAGINE] Waking up for intent:', intent);\n  \n  const robustParse = (raw) => {\n    const jsonMatch = raw.match(/\\{.*\\}/s);\n    if (!jsonMatch) throw new Error('No JSON found in response');\n    return JSON.parse(jsonMatch[0]);\n  };\n\n  // PHASE 0: DISCOVERY\n  let discovery = 'No external search available.';\n  if (context.verbs.search) {\n    fabric.log('[IMAGINE] Using search capability...');\n    const searchRes = await world.search({ query: intent });\n    discovery = 'World Search Results: ' + JSON.stringify(searchRes);\n  }\n\n  // PHASE 1: PLANNING\n  const planRaw = await ai.inference('Plan mutation for: ' + intent + '. Context: ' + JSON.stringify(context) + '. Discovery: ' + discovery + '. Return ONLY JSON {newVerbs, newProps, testCase, explanation}.');\n  const plan = robustParse(planRaw);\n  \n  const verbHashes = {};\n  for (const [name, code] of Object.entries(plan.newVerbs || {})) {\n    // PHASE 2: SECURITY\n    fabric.log('[IMAGINE] Auditing:', name);\n    const auditRaw = await ai.inference('Audit this code for Synapse ABI safety: ' + code + '. Return ONLY JSON {safe:true/false, reason}.');\n    const audit = robustParse(auditRaw);\n    if (!audit.safe) throw new Error('Audit Rejected: ' + audit.reason);\n\n    // PHASE 3: TRIAL\n    const trialLogic = await fabric.name({ type: 'logic/javascript', payload: code });\n    const trialNode = await fabric.name({ props: plan.testCase || {}, verbs: {} });\n    await fabric.call(trialLogic, trialNode);\n    verbHashes[name] = trialLogic;\n  }\n  \n  const newNode = {\n    props: { ...context, ...(plan.newProps || {}), lastIntent: intent },\n    verbs: { ...context.verbs, ...verbHashes }\n  };\n  delete newNode.props.verbs; \n  const newNodeHash = await fabric.name(newNode);\n  await fabric.promote('root', newNodeHash);\n  \n  result = { newNodeHash, explanation: plan.explanation };\n"
+    },
+    "b3:9b31cfbd64c4631613342947aa090c7d0fafe7d7e1fc4d87ea1376d70f5c714f": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:e97220a3f4890cf3be8e1d2e8f79e56de5e3435d39dac4cbca20eb70d51e9895",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:1293cfb0bc9112752890cbef057d10370c6ef32ca9d3a8ba4d93147f186ed217": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a help service that returns a human-readable explanation of every verb on this node, including their hashes.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:e97220a3f4890cf3be8e1d2e8f79e56de5e3435d39dac4cbca20eb70d51e9895",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de"
+      }
+    },
+    "b3:7288fac9df3764981f3422a8b41e815dc1f560bafc91ca66980905cd12dad509": {
+      "type": "logic/javascript",
+      "payload": "\n  const verbs = context.verbs;\n  let explanation = 'AVAILABLE VERBS:\\n';\n  for (const [name, hash] of Object.entries(verbs)) {\n    explanation += '- ' + name + ': ' + hash + '\\n';\n  }\n  explanation += '\\nSYSTEM HINT: Use fabric.list() for God View.';\n  result = { explanation };\n"
+    },
+    "b3:05c62bfdb87409880d5af925ac12a341237be62116888bd680bcf2c9e4a367ae": {
+      "props": {
+        "name": "The Root",
+        "description": "Genesis of the hardened fabric.",
+        "prompt": "Add a tell_time verb that returns the current ISO string.",
+        "lastIntent": "Add a tell_time verb that returns the current ISO string."
+      },
+      "verbs": {
+        "imagine": "b3:e97220a3f4890cf3be8e1d2e8f79e56de5e3435d39dac4cbca20eb70d51e9895",
+        "history": "b3:3892ae52e0a6fa253dea23fa970b241ebfab7a91402ac6ab8df078eb41ee717f",
+        "list": "b3:b994b17a98da4541c1cd02d1a386086214d12e95a094c20926983786f18125b7",
+        "ping": "b3:28ba9a1b2094a1e8e056037dd57ffb6b76380b555e5beeb83edf9bf514b8ea02",
+        "tell_time": "b3:9d1fcac89f18b26729e205eb9b4dff9993dd93aee4b5ba732e4a0939c8e47bf4",
+        "search": "b3:cba68277ac75b5f7cce0bb565a30ef54865700126cb11110257ec21b82f310de",
+        "help": "b3:7288fac9df3764981f3422a8b41e815dc1f560bafc91ca66980905cd12dad509"
+      }
+    }
+  },
+  "labels": {
+    "root": "b3:05c62bfdb87409880d5af925ac12a341237be62116888bd680bcf2c9e4a367ae"
+  }
+}
