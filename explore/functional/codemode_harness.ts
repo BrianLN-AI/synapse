@@ -1,8 +1,9 @@
 import { createArbiter } from './kernel';
 import { createPersistentWorld } from './world_persistent';
-import { Hash } from './world';
 import { readFileSync, writeFileSync } from 'fs';
 import { execSync } from 'child_process';
+
+type Hash = string;
 
 /**
  * Hardened Codemode Harness

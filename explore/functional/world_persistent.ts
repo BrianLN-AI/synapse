@@ -1,6 +1,7 @@
-import { Hash } from './world';
 import { readFileSync, appendFileSync, existsSync } from 'fs';
 import { hashExpression } from './hashing';
+
+type Hash = string;
 
 export type Event = 
   | { type: 'put', hash: Hash, expression: any, ts: string, cause?: Hash }

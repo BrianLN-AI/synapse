@@ -1,4 +1,10 @@
-import { Hash, Expression } from './world';
+export type Hash = string;
+export type Expression = 
+  | { type: 'verb'; name?: string; payload: string }
+  | { type: 'node'; verbs?: Record<string, Hash> }
+  | { type: 'link'; target: Hash; verb?: string }
+  | { type: 'text'; content: string }
+  | { type: 'code'; language?: string; payload: string };
 
 /**
  * PROJECTION.md - The Interface Shadow

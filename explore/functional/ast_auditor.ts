@@ -1,4 +1,4 @@
-import { parse, Node, Identifier, MemberExpression, AssignmentExpression, CallExpression } from 'acorn';
+import { parse } from 'acorn';
 
 export type AuditResult = { safe: true } | { safe: false; reason: string };
 

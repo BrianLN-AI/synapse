@@ -1,4 +1,4 @@
-import { Hash } from './world';
+type Hash = string;
 import { auditAST } from './ast_auditor';
 
 /**
