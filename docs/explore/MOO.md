@@ -1,4 +1,4 @@
-# MOO Exploration: Object-Oriented MUDs and the D-JIT Fabric
+# MOO: Object-Oriented MUDs
 
 ## Premise
 
@@ -16,7 +16,7 @@ MOO (Multiple User Dungeon, Object-Oriented) systems were text-based virtual wor
 
 ---
 
-## Canonical MOO Systems
+## Canonical Systems
 
 | System | Created | Notable |
 |--------|---------|---------|
@@ -26,10 +26,10 @@ MOO (Multiple User Dungeon, Object-Oriented) systems were text-based virtual wor
 | **FrobMOO** | Various | Gaming-oriented MOOs |
 | **MOO.se** | Various | Swedish academic MOOs |
 
-### LambdaMOO Reference
+### References
+- [LambdaMOO Programmer's Manual](http://www.moo-obsessed.com/papers/LambdaMooRef.html)
 - [MOO Programming Guide](https://www.cs.clemson.edu/~mark/moo.html)
-- [Official MOO Documentation](http://www.moo-obsessed.com/papers/LambdaMooRef.html)
-- [MOO as Social Infrastructure (Wetware)](https://wetware.cool/blog/moo-as-social-infrastructure)
+- [Wetware: MOO as Social Infrastructure](https://wetware.cool/blog/moo-as-social-infrastructure)
 
 ---
 
@@ -42,147 +42,91 @@ MOO's object model is surprisingly modern:
 - Verbs are methods attached to objects
 - Inheritance with multiple parents
 
-**Synapse parallel:** Blobs are immutable objects. The ABI contract defines the interface. The 4-layer stack handles what MOO verbs do.
-
 ### 2. Capability-Based Security
-MOO objects have permissions:
-```
+```moo
 player.can_do_something -> bool
 ```
 
-**Synapse parallel:** The ABI contract + scrubbed scope + governance expression.
-
 ### 3. Persistent World State
-MOO world state survives disconnection. Every property write is immediately persisted.
-
-**Synapse parallel:** The append-only vault. Telemetry is persisted. Manifest is the "world state."
+Every property write is immediately persisted. State survives disconnection.
 
 ### 4. Player-Created Content
-MOO players create objects, verbs, properties. The MOO grows organically.
-
-**Synapse parallel:** Blob creation is the equivalent. The vault grows organically.
+Players create objects, verbs, properties. The MOO grows organically.
 
 ### 5. Message Passing
-Objects communicate via:
-```
+```moo
 object:verb(arg1, arg2)
 ```
 
-**Synapse parallel:** Blob invocation. Content-addressed calls.
-
 ### 6. The "Recursion Problem"
-MOO had a bootstrap problem: the initial MOO database had to be created, but the database was stored in the MOO itself.
-
-**Synapse parallel:** The `_raw_get` bootstrap. The genesis blob problem.
+The initial MOO database had to be created, but the database was stored in the MOO itself.
 
 ---
 
-## What Synapse Has That MOO Didn't
+## MOO → Synapse Mapping
 
 | MOO | Synapse |
 |-----|---------|
-| Mutable objects | Immutable blobs (append-only) |
-| Text-based world | Content-addressed computation |
-| Single-server | Distributed mesh |
-| Object-level security | Hash-based identity + governance |
-| Linear world (rooms) | Address-space (content addressing) |
-| No verification | ZK proof layer |
-| No fitness function | f(Link) optimization |
-| Single-threaded interpreter | Multi-runtime (Python, JS, WASM) |
-| Human players | AI agents |
+| Object | Blob |
+| Property | Data blob (data/*) |
+| Verb | Blob (application/*) |
+| Room | Scope / vault region |
+| Player | Node |
+| Exit | Link (invocation chain) |
+| Object ID `#1234` | Stable ID (see design/OBJECT-MODEL.md) |
+| Inheritance | Composition via references |
+| Object permissions | Governance expression |
+| Creation room | Genesis blob |
+| Player programmer | AI agent |
 
 ---
 
-## Key MOO Concepts Mapped to Synapse
+## Interesting MOO Properties
 
-### Room → Vault Region
-In MOO, rooms contain objects. In Synapse, vaults contain blobs. Both are persistent storage with content-based addressing.
+### The "Soft" Nature
+MOO had no compile step. Code was entered as text and executed immediately. Easy to change, hard to version.
 
-### Player → Node
-Players are agents in MOO. Nodes are runtimes in Synapse.
+**Question:** Should blobs be versioned? Current design: immutable, referenced by hash.
 
-### Exit → Link
-Exits connect rooms. Links connect blobs (invocation chains).
-
-### Verb → Blob (application/*)
-Verbs are callable code. Blobs are executable code.
-
-### Property → Data Blob (data/*)
-Properties are named values. Data blobs are named content.
-
-### Inheritance → Composition via References
-MOO objects inherit. Synapse blobs reference other blobs.
-
-### Object Permissions → Governance Expression
-MOO: `player can call verb`
-Synapse: `governance expression approves blob`
-
-### MOO Programmer → AI Agent
-MOO allowed players to extend the world. Synapse allows AI agents to propose blob mutations.
-
----
-
-## Interesting MOO Properties for Synapse Design
-
-### 1. The "Soft" Nature of MOO
-MOO had no compile step. Code was entered as text and executed immediately. This made it very "soft" — easy to change, hard to version.
-
-**Question for Synapse:** Should blobs be versioned? Current design is not — blobs are immutable and referenced by hash.
-
-### 2. The "Living" World
+### The "Living" World
 MOO worlds were alive because players contributed. The world evolved through player action.
 
-**Synapse parallel:** The GOKR + council convergence. The fabric evolves through governed contribution.
+**Synapse:** GOKR + council convergence. The fabric evolves through governed contribution.
 
-### 3. The "First Login" Problem
-When you first logged into a MOO, you appeared in a special "creation room" where you could build yourself.
+### The "First Login" Problem
+First login → creation room → build yourself.
 
-**Synapse parallel:** Genesis blob + cold boot. The bootstrap process creates the initial environment.
+**Synapse:** Genesis blob + cold boot.
 
-### 4. Social Governance
-MOO had social enforcement. Admins could modify anything, but they did so sparingly because it would anger players.
+### Social Governance
+Admins could modify anything, but did so sparingly. Social enforcement.
 
-**Synapse parallel:** Governance expression + quorum. Social pressure encoded as cryptographic constraints.
+**Synapse:** Governance expression + quorum. Social pressure encoded as cryptographic constraints.
 
-### 5. The "Unwind" Problem
+### The "Unwind" Problem
 MOO code could corrupt the database. Recovery required admin intervention.
 
-**Synapse parallel:** Append-only vault. No corruption possible — only new blobs.
+**Synapse:** Immutable blobs. No corruption possible — only new blobs.
 
 ---
 
-## MOO-Inspired Ideas for Synapse
+## MOO-Inspired Ideas
 
-### 1. Object-Capability Model for Blobs
-MOO had fine-grained permissions. Synapse could add capability tokens to blobs:
-```
+### Object-Capability Model
+```json
 {
   "capabilities": ["network", "filesystem", "spawn"],
   "parent_capabilities": ["parent_blob_hash"]
 }
 ```
 
-### 2. Blob Inheritance (Composition)
-MOO objects could inherit from parents. Synapse could allow blobs to declare dependencies:
-```
-{
-  "inherits_from": ["hash1", "hash2"],
-  "overrides": ["method1"]
-}
+### Verb Namespaces
+```moo
+$room:open_door()
 ```
 
-### 3. Verb Namespaces
-MOO verbs had namespaces (e.g., `$room:open_door()`). Synapse could add typed invocation:
-```
-blob_type:verb_name(hash, context)
-```
-
-### 4. Player-Created Blobs
-MOO let players create verbs. Synapse could let AI agents create blobs via governance.
-
-### 5. The "Living Vault"
-MOO worlds were described textually. Synapse could add descriptive metadata to blobs:
-```
+### Living Vault Metadata
+```json
 {
   "description": "Doubles a number",
   "author": "agent_xyz",
@@ -193,7 +137,7 @@ MOO worlds were described textually. Synapse could add descriptive metadata to b
 
 ---
 
-## Questions
+## Questions for Synapse
 
 1. **Object identity:** MOO objects had persistent IDs (`#1234`). Synapse blobs have hashes. Is this sufficient or do we need named objects?
 
@@ -207,20 +151,8 @@ MOO worlds were described textually. Synapse could add descriptive metadata to b
 
 ---
 
-## References
+## See Also
 
-- [LambdaMOO Programmer's Manual](http://www.moo-obsessed.com/papers/LambdaMooRef.html)
-- [MOO Programming Guide](https://www.cs.clemson.edu/~mark/moo.html)
-- [Wetware: MOO as Social Infrastructure](https://wetware.cool/blog/moo-as-social-infrastructure)
-- [Wikipedia: MOO](https://en.wikipedia.org/wiki/MOO)
-- [Eric Mack's MOO Papers](http://www.moo-obsessed.com/papers/)
-
----
-
-## Next Steps
-
-1. Research LambdaMOO architecture in depth
-2. Map MOO security model to capability-based security
-3. Design "blob inheritance" as composition
-4. Explore "living vault" metadata
-5. Define "player/agent" creation in Synapse context
+- [design/OBJECT-MODEL.md](../design/OBJECT-MODEL.md) — Stable IDs, versioning
+- [explore/SMALLTALK.md](SMALLTALK.md) — Live coding, metacircular systems
+- [explore/BEAM.md](BEAM.md) — Actor model, hot code loading

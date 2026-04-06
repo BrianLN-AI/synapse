@@ -208,6 +208,82 @@ A `private` scope can be `clone`d into a `shared` scope. A `public` scope can co
 
 ---
 
+## Graph Queries and Scopes
+
+The vault is a Merkle DAG. Scopes provide cached access to subgraphs. Query scopes hold references to blobs found through graph traversal.
+
+### Edge Types
+
+The vault graph has derived edges:
+
+| Edge | Meaning | Scope implication |
+|------|---------|------------------|
+| `GOVERNS` | Governance expression → promoted blob | Tracks what's approved |
+| `OBSERVES` | Telemetry record → logic blob | Execution history |
+| `PRECEDES` | Blob → prior version | Lineage/evolution |
+| `DEPENDS` | Blob → referenced blobs | Dependency graph |
+| `TAGGED` | Tag artifact → blob | Metadata |
+| `SIMILAR` | Semantic similarity | Discovery |
+
+### Query as Scope
+
+Query results are scopes:
+
+```
+query_scope = {
+  type: "query_result",
+  lifespan: "ephemeral",
+  references: { found_blob_1: 1, found_blob_2: 1 },
+  query: "traverse from seed following GOVERNS..."
+}
+```
+
+**This means:**
+- Graph traversals create scopes
+- Results are scoped references (cacheable)
+- GC applies to query results
+- Queries can be named and saved (`query_def` scope type)
+
+### S-Expression Query DSL
+
+Queries are S-expressions. Queries are blobs.
+
+```lisp
+; Current blobs for tenant T
+(traverse (hash genesis) GOVERNS (type? "logic/") BFS)
+
+; Semantic neighborhood of X
+(traverse (query (embed x)) SIMILAR (score> 0.8) BFS)
+
+; Chain projections (version history)
+(chain (hash manifest-v1) PRECEDES)
+```
+
+**Homoiconicity:** Query language = execution language. Queries can be stored, versioned, governed.
+
+### Scope as Graph Cache
+
+```
+User scope → { my blobs }
+Tenant scope → { org blobs, shared modules }
+Query scope → { results of traversal }
+```
+
+Scopes are cache regions for the reference graph. GC applies to all scope types uniformly.
+
+### Semantic Similarity
+
+```
+(traverse (query "text embedding")) SIMILAR (score> 0.8)
+```
+
+Requires:
+- Embedding model
+- `meta/embedding` blob type
+- Index (see GRAPH-QUERY-LAYER.md for details)
+
+---
+
 ## Open Questions
 
 1. **Hierarchical vs. graph?** Is scope a tree, a graph, or both?
@@ -216,6 +292,7 @@ A `private` scope can be `clone`d into a `shared` scope. A `public` scope can co
 4. **Billing model?** Per-scope storage? Per-invocation? Per-reference?
 5. **Scope death protocol?** Grace period, data export, deletion?
 6. **Scope migration?** Can scopes move between tenants?
+7. **Query scope TTL?** How long do query_result scopes live?
 
 ---
 
