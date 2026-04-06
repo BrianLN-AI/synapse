@@ -1,0 +1,33 @@
+# Vantage Transformation Schema (v0.1)
+
+This schema defines how concepts from Vantage A are mapped into Vantage B. 
+Used for programmatic conflict detection across ADRs.
+
+```json
+{
+  "version": "0.1",
+  "transformations": [
+    {
+      "source_vantage": "Physicist",
+      "target_vantage": "Economist",
+      "rule": "equilibrium_adjust -> price_signal",
+      "justification": "Invariance of state stability; Physicist observes flux, Economist observes signal.",
+      "provenance": "[TRAINED]"
+    },
+    {
+      "source_vantage": "Economist",
+      "target_vantage": "Security",
+      "rule": "incentive_alignment -> trust_anchor",
+      "justification": "Invariance of system integrity; Economist models actors, Security models anchors.",
+      "provenance": "[UNTRAINED]"
+    },
+    {
+      "source_vantage": "Security",
+      "target_vantage": "Physicist",
+      "rule": "trust_anchor_hijack -> entropy_increase",
+      "justification": "Invariance of information flow; Security observes integrity breach, Physicist observes disorder/entropy.",
+      "provenance": "[UNTRAINED]"
+    }
+  ]
+}
+```
