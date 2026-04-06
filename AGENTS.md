@@ -105,3 +105,21 @@ git worktree remove ../worktrees/test-feature
 # Commit after each successful unit test
 git add -A && git commit -m "describe what changed"
 ```
+
+---
+
+## Fabric Principles: Epistemic Rigor
+
+- **Epistemic Iteration**: Governance and protocols are falsifiable hypotheses, not static mandates. We measure progress by failed hypotheses successfully discarded, not code accumulated.
+- **Evidence-Anchored Accountability**: We reject "feelings-as-fact." Every rationalization must ground in structural graph queries (topology) or programmatic falsifiers (code).
+- **Relativistic Truth (Observer-Dependency)**: Truth is a vantage-dependent projection. Divergence between audit lenses (e.g., Security vs. Protocol) is a structural signal, not a conflict to be resolved.
+- **Bounded Drift**: Determinism is an illusion maintained by a cooperative universe. We design for "let it crash" and recovery-via-audit rather than trying to architect absolute correctness.
+- **The Zero-Cost Erasure Mandate**: We prioritize discarding dead-weight (failed experiments, stale protocols) over maintaining or patching them. No protocol is a permanent constraint.
+
+---
+
+## Governance Philosophy: Epistemic Iteration
+- **"Protocols as Verifiable Experiments"**: Governance is not static mandate; it is a falsifiable hypothesis.
+- **"The Kill Switch"**: Every experiment must define the exact evidence that triggers its abandonment.
+- **"Cold Audit Mode"**: We do not patch failures; we discard branches and re-implement from the last known-good state.
+- **"Zero-Cost Erasure"**: We prioritize discarding dead-weight protocols over maintaining/patching them.
